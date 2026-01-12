@@ -13,9 +13,10 @@ int prime_count = 0;
 rw_lock_t lock;
 
 // Configuration
-int num_readers = 5;
-int num_writers = 3;
-int duration = 10;  // seconds
+int num_readers = 10;
+int num_writers = 10;
+int duration = 20;  // seconds
+int max_range = 10000;  // maximum number to check for primes
 rw_mode_t mode = READER_PREF;
 bool running = true;
 
@@ -69,9 +70,11 @@ void* writer_thread(void* arg) {
     log_message(THREAD_WRITER, id, "started");
     
     // Each writer checks a range of numbers
-    int range_size = 1000;
-    int start = id * range_size + 2;
-    int end = start + range_size;
+    // Total range: [2, max_range) divided among all writers
+    int total_range = max_range - 2;
+    int range_per_writer = total_range / num_writers;
+    int start = 2 + (id - 1) * range_per_writer;
+    int end = (id == num_writers) ? max_range : start + range_per_writer;
     
     for (int num = start; num < end && running; num++) {
         if (is_prime(num)) {
@@ -83,7 +86,12 @@ void* writer_thread(void* arg) {
             
             writer_exit(&lock);
             
-            random_sleep(20, 80);
+            // In vanilla mode, reduce sleep to increase race window
+            if (mode == VANILLA) {
+                usleep(100);  // Very short sleep to maximize contention
+            } else {
+                random_sleep(20, 80);
+            }
         }
     }
     
@@ -98,6 +106,7 @@ void print_usage(const char* prog) {
     printf("  --writers N       Number of writer threads (default: 3)\n");
     printf("  --mode MODE       Synchronization mode: vanilla, reader_pref, writer_pref, fair (default: reader_pref)\n");
     printf("  --duration N      Duration in seconds (default: 10)\n");
+    printf("  --range N         Maximum number to check primes up to (default: 1000)\n");
     printf("  --help            Show this help message\n");
 }
 
@@ -110,6 +119,8 @@ int main(int argc, char* argv[]) {
             num_writers = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--duration") == 0 && i + 1 < argc) {
             duration = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--range") == 0 && i + 1 < argc) {
+            max_range = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--mode") == 0 && i + 1 < argc) {
             i++;
             if (strcmp(argv[i], "vanilla") == 0) mode = VANILLA;
@@ -133,8 +144,9 @@ int main(int argc, char* argv[]) {
     
     printf("=== Prime Counter - Reader-Writer Problem ===\n");
     printf("Mode: %s\n", rw_mode_name(mode));
-    printf("Readers: %d, Writers: %d, Duration: %d seconds\n\n", 
+    printf("Readers: %d, Writers: %d, Duration: %d seconds\n", 
            num_readers, num_writers, duration);
+    printf("Checking primes in range: [2, %d)\n\n", max_range);
     
     // Create threads
     pthread_t readers[num_readers];
@@ -171,9 +183,11 @@ int main(int argc, char* argv[]) {
     
     // Calculate expected count for verification
     int expected = 0;
+    int total_range = max_range - 2;
+    int range_per_writer = total_range / num_writers;
     for (int w = 0; w < num_writers; w++) {
-        int start = w * 1000 + 2;
-        int end = start + 1000;
+        int start = 2 + w * range_per_writer;
+        int end = (w == num_writers - 1) ? max_range : start + range_per_writer;
         for (int num = start; num < end; num++) {
             if (is_prime(num)) expected++;
         }

@@ -2,13 +2,12 @@
 
 Dự án môn Hệ điều hành về bài toán **Reader-Writer Problem** được viết bằng C với POSIX threads.
 
-## 📋 Tổng quan
+## 📋 Tông quan
 
-Project này bao gồm **3 phiên bản** minh họa bài toán Reader-Writer với các tài nguyên chia sẻ khác nhau:
+Project này bao gồm **2 phiên bản** minh họa bài toán Reader-Writer với các tài nguyên chia sẻ khác nhau:
 
-1. **Version 1 - Prime Counter**: Đếm số nguyên tố với biến đếm chung
-2. **Version 2 - Shared String**: Chuỗi ký tự được cập nhật liên tục 
-3. **Version 3 - File Simulation**: Mô phỏng file buffer trong bộ nhớ
+1. **Version 1 - Prime Counter**: Đếm số nguyên tố với biến đếm chung (demo lost updates)
+2. **Version 2 - Shared String**: Chuỗi ký tự được cập nhật liên tục (demo torn reads)
 
 Mỗi phiên bản hỗ trợ **4 chế độ đồng bộ**:
 
@@ -32,9 +31,10 @@ Project/
 ├── version2_string/
 │   ├── shared_string.c    # Chương trình chuỗi chung
 │   └── Makefile
-├── version3_file/
-│   ├── file_sim.c         # Chương trình mô phỏng file
-│   └── Makefile
+├── logs/                  # Thư mục chứa test logs
+├── analyze_race.py        # Script phân tích race conditions
+├── analyze_comprehensive.py  # Script phân tích toàn diện
+├── run_tests.sh           # Chạy 32 tests tự động
 ├── Makefile               # Makefile tổng
 └── README.md
 ```
@@ -47,12 +47,11 @@ Project/
 make all
 ```
 
-### Build từng phiên bản:
+###Build từng phiên bản:
 
 ```bash
 make version1  # Prime counter
 make version2  # Shared string
-make version3  # File simulation
 ```
 
 ### Clean:
@@ -113,56 +112,60 @@ cd version2_string
 
 ---
 
-### Version 3: File Simulation
+## 🧪 Comprehensive Test Results
 
-```bash
-cd version3_file
+Project này đã được test toàn diện với **32 runs** (4 modes × 4 runs × 2 versions):
 
-# Reader preference
-./file_sim --readers 4 --writers 4 --duration 10 --mode reader_pref
+```
+======================================================================
+VERSION 1: Prime Counter (Lost Updates Detection)
+======================================================================
 
-# Vanilla mode (xem data corruption)
-./file_sim --readers 4 --writers 4 --duration 5 --mode vanilla
+✗ vanilla         : 3/4 runs clean  (avg 2.0 lost updates)
+✓ reader_pref     : 4/4 runs clean
+✓ writer_pref     : 4/4 runs clean
+✓ fair            : 4/4 runs clean
 
-# Writer preference  
-./file_sim --readers 2 --writers 15 --duration 10 --mode writer_pref
+======================================================================
+VERSION 2: Shared String (Torn Reads Detection)  
+======================================================================
 
-# Fair mode
-./file_sim --readers 15 --writers 15 --duration 10 --mode fair
+✗ vanilla         : 0/4 runs clean  (avg 362 torn reads)
+✓ reader_pref     : 4/4 runs clean
+✓ writer_pref     : 4/4 runs clean
+✓ fair            : 4/4 runs clean
 ```
 
-**Cách hoạt động:**
-- Writer threads: Append log lines vào buffer
-- Reader threads: Đọc snapshot của buffer và đếm số dòng
-- Vanilla mode: Độ dài buffer không nhất quán, dữ liệu bị rách
+**Kết luận:**
+- ✓ Vanilla mode **đúng như mong đợi** xuất hiện race conditions
+- ✓ Tất cả synchronized modes (reader_pref, writer_pref, fair) **100% correct**
+- ✓ Hệ thống hoạt động chính xác như thiết kế
+
+### Chạy Tests Tự Động
+
+```bash
+# Chạy 32 tests và phân tích tự động
+./run_tests.sh
+
+# Phân tích một log file cụ thể
+python3 analyze_race.py logs/v2_vanilla_run1_SESSION.txt
+
+# Xem kết quả tổng hợp
+cat results_SESSION.txt
+```
 
 ---
-
-## 📊 Các tham số CLI
-
-Tất cả các chương trình đều hỗ trợ các tham số:
-
-| Tham số | Mô tả | Mặc định |
-|---------|-------|----------|
-| `--readers N` | Số lượng reader threads | 3-5 |
-| `--writers N` | Số lượng writer threads | 3-4 |
-| `--mode MODE` | Chế độ: `vanilla`, `reader_pref`, `writer_pref`, `fair` | `reader_pref` |
-| `--duration N` | Thời gian chạy (giây) | 10 |
-| `--help` | Hiển thị trợ giúp | - |
 
 ## 🧪 Test cases quan trọng
 
 ### 1. Demo Race Condition (Vanilla Mode)
 
 ```bash
-# Version 1: Kết quả đếm sẽ SAI
-./version1_prime/prime_counter --mode vanilla --readers 5 --writers 5 --duration 5
+# Version 1: Kết quả đếm sẽ SAI (lost updates)
+./version1_prime/prime_counter --mode vanilla --readers 5 --writers 8 --duration 8
 
-# Version 2: Sẽ thấy chuỗi BỊ XÉ
-./version2_string/shared_string --mode vanilla --readers 3 --writers 3 --duration 5
-
-# Version 3: Buffer length và nội dung KHÔNG NHẤT QUÁN
-./version3_file/file_sim --mode vanilla --readers 4 --writers 4 --duration 5
+# Version 2: Sẽ thấy chuỗi BỊ XÉ (torn reads)
+./version2_string/shared_string --mode vanilla --readers 5 --writers 8 --duration 8
 ```
 
 ### 2. Demo Writer Starvation (Reader Preference)
@@ -183,7 +186,7 @@ Tất cả các chương trình đều hỗ trợ các tham số:
 
 ```bash
 # Cả reader và writer đều có thời gian chờ hợp lý
-./version3_file/file_sim --mode fair --readers 20 --writers 20 --duration 10
+./version1_prime/prime_counter --mode fair --readers 20 --writers 20 --duration 10
 ```
 
 ## 📝 Giải thích các chế độ đồng bộ
@@ -225,18 +228,13 @@ Tất cả các chương trình đều hỗ trợ các tham số:
 ## 🎯 Kết quả mong đợi
 
 ### Vanilla Mode
-- ⚠️ Prime counter: Kết quả < expected (lost updates)
-- ⚠️ Shared string: Thấy chuỗi lẫn lộn, bị xé
-- ⚠️ File simulation: Độ dài buffer sai, nội dung rách
+- ⚠️ Prime counter: Kết quả < expected (lost updates ~1-3 mỗi run)
+- ⚠️ Shared string: Thấy chuỗi lẫn lộn, bị xé (~300-400 torn reads)
 
-### Reader/Writer Preference
-- ✓ Không có race condition
-- ⚠️ Có hiện tượng starvation (một bên chờ quá lâu)
-
-### Fair Mode
-- ✓ Không có race condition  
-- ✓ Cả hai bên đều tiến triển hợp lý
-- ✓ Throughput có thể thấp hơn một chút do overhead
+### Reader/Writer/Fair Preference
+- ✓ Không có race condition (100% correct)
+- ⚠️ Reader/Writer pref có thể có starvation
+- ✓ Fair mode: Cân đối, không starvation
 
 ## 📚 Tài liệu tham khảo
 

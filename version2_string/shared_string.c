@@ -15,23 +15,36 @@ char shared_string[STRING_SIZE];
 rw_lock_t lock;
 
 // Configuration
-int num_readers = 3;
-int num_writers = 3;
+int num_readers = 10;
+int num_writers = 10;
 int duration = 10;  // seconds
 rw_mode_t mode = READER_PREF;
 bool running = true;
 
 // Predefined sentences for writers to cycle through
 const char* sentences[] = {
+    "A",  // Very short - 1 char
+    "Hello World!",  // Short - 12 chars
     "The quick brown fox jumps over the lazy dog.",
     "Operating systems manage hardware and software resources.",
+    "X",  // Very short - 1 char
     "Synchronization prevents race conditions in concurrent programs.",
     "Readers and writers must coordinate access to shared data.",
+    "Race!",  // Very short - 5 chars
     "Mutual exclusion ensures only one writer at a time.",
-    "Pthread library provides powerful threading primitives."
+    "Pthread library provides powerful threading primitives.",
+    "Concurrency bugs are difficult to reproduce and debug consistently.",
+    "AB",  // Very short - 2 chars
+    "Memory barriers ensure proper ordering of operations across cores.",
+    "Deadlock occurs when threads wait indefinitely for each other.",
+    "Test",  // Short - 4 chars
+    "Lock-free data structures use atomic operations for synchronization.",
+    "Thread pools improve performance by reusing worker threads efficiently.",
+    "!",  // Very short - 1 char
+    "Context switching between threads has performance overhead costs.",
+    "Critical sections must be kept as short as possible for efficiency."
 };
-const int num_sentences = 6;
-
+const int num_sentences = sizeof(sentences) / sizeof(sentences[0]);
 // Random sleep in milliseconds
 void random_sleep(int min_ms, int max_ms) {
     int sleep_ms = min_ms + rand() % (max_ms - min_ms + 1);
