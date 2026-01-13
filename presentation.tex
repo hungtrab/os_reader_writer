@@ -18,11 +18,28 @@
     frame=single
 }
 
-\title{The Reader-Writer Problem}
-\subtitle{Implementation and Analysis of Synchronization Strategies}
-\author{Your Name}
-\institute{Your University}
+\title{OS Project}
+\subtitle{Topic 6. The Reader-Writer Problem}
+\author{Tran Quang Hung 20235502\\
+Nguyen Xuan Khai 20235501}
+\institute{\large Hanoi University of Science and Technology\\
+Supervisor: PhD. Do Quoc Huy}
 \date{\today}
+
+% Custom footline - Reader-Writer Problem in bottom left
+\setbeamertemplate{footline}
+{
+  \leavevmode%
+  \hbox{%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.25ex,dp=1ex,left]{author in head/foot}%
+    \hspace*{2ex}\usebeamerfont{author in head/foot}Reader-Writer Problem
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.25ex,dp=1ex,right]{date in head/foot}%
+    \usebeamerfont{date in head/foot}\insertshortdate{}\hspace*{2em}
+    \insertframenumber{} / \inserttotalframenumber\hspace*{2ex} 
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
 
 \begin{document}
 
@@ -38,6 +55,13 @@
 
 % Section 1: Introduction
 \section{Introduction}
+
+\begin{frame}[c] % [c] centers content vertically
+    \centering   % centers content horizontally
+    
+    {\Huge \textbf{INTRODUCTION}} % \Huge makes it big, \textbf makes it bold
+
+\end{frame}
 
 \begin{frame}{The Reader-Writer Problem}
 \begin{block}{Problem Statement}
@@ -60,43 +84,43 @@ Allow multiple readers \textbf{OR} one writer at a time, while maintaining:
 \end{block}
 \end{frame}
 
-\begin{frame}{Real-World Applications}
-\begin{columns}
-\column{0.5\textwidth}
-\textbf{Database Systems}
-\begin{itemize}
-    \item PostgreSQL
-    \item MySQL InnoDB
-    \item Read/Write transactions
-\end{itemize}
+% \begin{frame}{Real-World Applications}
+% \begin{columns}
+% \column{0.5\textwidth}
+% \textbf{Database Systems}
+% \begin{itemize}
+%     \item PostgreSQL
+%     \item MySQL InnoDB
+%     \item Read/Write transactions
+% \end{itemize}
 
-\vspace{0.3cm}
+% \vspace{0.3cm}
 
-\textbf{Operating Systems}
-\begin{itemize}
-    \item Linux kernel RW semaphores
-    \item File system access
-    \item Process synchronization
-\end{itemize}
+% \textbf{Operating Systems}
+% \begin{itemize}
+%     \item Linux kernel RW semaphores
+%     \item File system access
+%     \item Process synchronization
+% \end{itemize}
 
-\column{0.5\textwidth}
-\textbf{Programming Languages}
-\begin{itemize}
-    \item Java ReadWriteLock
-    \item C++ shared\_mutex
-    \item Rust RwLock
-\end{itemize}
+% \column{0.5\textwidth}
+% \textbf{Programming Languages}
+% \begin{itemize}
+%     \item Java ReadWriteLock
+%     \item C++ shared\_mutex
+%     \item Rust RwLock
+% \end{itemize}
 
-\vspace{0.3cm}
+% \vspace{0.3cm}
 
-\textbf{Distributed Systems}
-\begin{itemize}
-    \item Cache coherence
-    \item Shared memory
-    \item Configuration services
-\end{itemize}
-\end{columns}
-\end{frame}
+% \textbf{Distributed Systems}
+% \begin{itemize}
+%     \item Cache coherence
+%     \item Shared memory
+%     \item Configuration services
+% \end{itemize}
+% \end{columns}
+% \end{frame}
 
 \begin{frame}{Research Contributions}
 \begin{enumerate}
@@ -109,40 +133,56 @@ Allow multiple readers \textbf{OR} one writer at a time, while maintaining:
     \item \textbf{Quantitative Analysis}: Performance trade-offs between strategies
     \vspace{0.2cm}
     
-    \item \textbf{Practical Insights}: Implementation guidance for real systems
 \end{enumerate}
 \end{frame}
 
 % Section 2: Architecture
-\section{System Architecture}
+% \section{System Architecture}
 
-\begin{frame}{Three-Layer Architecture}
-\begin{tikzpicture}[scale=0.9, every node/.style={scale=0.9}]
-    % Layer 3 - Application
-    \draw[fill=blue!20] (0,6) rectangle (10,7.5);
-    \node at (5,6.75) {\textbf{Application Layer: Shared String}};
+% \begin{frame}{Three-Layer Architecture}
+% \begin{tikzpicture}[scale=0.9, every node/.style={scale=0.9}]
+%     % Layer 3 - Application
+%     \draw[fill=blue!20] (0,6) rectangle (10,7.5);
+%     \node at (5,6.75) {\textbf{Application Layer: Shared String}};
     
-    % Layer 2 - Infrastructure
-    \draw[fill=green!20] (0,4) rectangle (10,5.5);
-    \node at (5,4.75) {\textbf{Common Infrastructure: RW-Lock + Logger}};
+%     % Layer 2 - Infrastructure
+%     \draw[fill=green!20] (0,4) rectangle (10,5.5);
+%     \node at (5,4.75) {\textbf{Common Infrastructure: RW-Lock + Logger}};
     
-    % Layer 1 - Foundation
-    \draw[fill=orange!20] (0,2) rectangle (10,3.5);
-    \node at (5,2.75) {\textbf{Configuration: CLI Arguments}};
+%     % Layer 1 - Foundation
+%     \draw[fill=orange!20] (0,2) rectangle (10,3.5);
+%     \node at (5,2.75) {\textbf{Configuration: CLI Arguments}};
     
-    % Arrows
-    \draw[->,thick] (5,5.5) -- (5,6);
-    \draw[->,thick] (5,3.5) -- (5,4);
-\end{tikzpicture}
+%     % Arrows
+%     \draw[->,thick] (5,5.5) -- (5,6);
+%     \draw[->,thick] (5,3.5) -- (5,4);
+% \end{tikzpicture}
 
-\vspace{0.3cm}
+% \vspace{0.3cm}
 
-\textbf{Benefits:}
-\begin{itemize}
-    \item Easy mode comparison (single parameter change)
-    \item Reusable synchronization primitives
-    \item Configurable test scenarios
-\end{itemize}
+% \textbf{Benefits:}
+% \begin{itemize}
+%     \item Easy mode comparison (single parameter change)
+%     \item Reusable synchronization primitives
+%     \item Configurable test scenarios
+% \end{itemize}
+% \end{frame}
+
+\begin{frame}[c] % [c] centers content vertically
+    \centering   % centers content horizontally
+    
+    {\Huge \textbf{IMPLEMENTATION}} % \Huge makes it big, \textbf makes it bold
+
+\end{frame}
+
+\begin{frame}{Demonstration}
+    \centering
+    \includegraphics[width=\textwidth]{media/predefined_sentences.png}
+\end{frame}
+
+\begin{frame}{Demonstration}
+    \centering
+    \includegraphics[width=\textwidth]{media/error.png}
 \end{frame}
 
 \begin{frame}[fragile]{Unified Lock API}
@@ -166,29 +206,29 @@ void rw_destroy(rw_lock_t *lock);
 \textbf{Key advantage}: Performance differences purely due to synchronization strategy, not implementation variations
 \end{frame}
 
-\begin{frame}{Synchronization Primitives}
-\begin{block}{Mutex-Based Implementation (Our Choice)}
-\begin{itemize}
-    \item Uses \texttt{pthread\_mutex\_t}
-    \item Better integration with condition variables
-    \item Clearer ownership semantics
-    \item Widely supported in POSIX
-\end{itemize}
-\end{block}
+% \begin{frame}{Synchronization Primitives}
+% \begin{block}{Mutex-Based Implementation (Our Choice)}
+% \begin{itemize}
+%     \item Uses \texttt{pthread\_mutex\_t}
+%     \item Better integration with condition variables
+%     \item Clearer ownership semantics
+%     \item Widely supported in POSIX
+% \end{itemize}
+% \end{block}
 
-\vspace{0.3cm}
+% \vspace{0.3cm}
 
-\begin{block}{Alternative: Semaphore-Based}
-\begin{itemize}
-    \item Uses counting semaphores
-    \item Simpler conceptual model for some algorithms
-    \item Common in textbook solutions
-\end{itemize}
-\end{block}
+% \begin{block}{Alternative: Semaphore-Based}
+% \begin{itemize}
+%     \item Uses counting semaphores
+%     \item Simpler conceptual model for some algorithms
+%     \item Common in textbook solutions
+% \end{itemize}
+% \end{block}
 
-\vspace{0.2cm}
-\textbf{Note}: Both approaches are equally valid. Reader/Writer Preference and Fair scheduling are \textbf{algorithms}, not primitives.
-\end{frame}
+% \vspace{0.2cm}
+% \textbf{Note}: Both approaches are equally valid. Reader/Writer Preference and Fair scheduling are \textbf{algorithms}, not primitives.
+% \end{frame}
 
 % Section 3: Implementation
 \section{Implementation}
@@ -231,6 +271,13 @@ Without synchronization, readers see partial updates: \\
 
 % Section 4: Synchronization Modes
 \section{Synchronization Modes}
+
+\begin{frame}[c] % [c] centers content vertically
+    \centering   % centers content horizontally
+    
+    {\Huge \textbf{SYNCHRONIZATION MODES}} % \Huge makes it big, \textbf makes it bold
+
+\end{frame}
 
 \begin{frame}[fragile]{Mode 1: Vanilla (No Synchronization)}
 \begin{lstlisting}[language=C]
@@ -383,6 +430,13 @@ Fair & \textcolor{green!50!black}{YES} & \textcolor{green!50!black}{None} & Medi
 % Section 5: Experimental Results
 \section{Experimental Results}
 
+\begin{frame}[c] % [c] centers content vertically
+    \centering   % centers content horizontally
+    
+    {\Huge \textbf{EXPERIMENTAL RESULTS}} % \Huge makes it big, \textbf makes it bold
+
+\end{frame}
+
 \begin{frame}{Test Methodology}
 \begin{block}{Automated Testing Framework}
 \begin{itemize}
@@ -409,7 +463,7 @@ Fair & \textcolor{green!50!black}{YES} & \textcolor{green!50!black}{None} & Medi
 \end{frame}
 
 \begin{frame}{Actual Test Results}
-\textbf{Session ID}: 20260113\_004235
+% \textbf{Session ID}: 20260113\_004235
 
 \vspace{0.3cm}
 
@@ -493,6 +547,13 @@ fair & \textcolor{green!50!black}{\textbf{4/4}} & \textcolor{green!50!black}{\te
 % Section 6: Conclusion
 \section{Conclusion}
 
+\begin{frame}[c] % [c] centers content vertically
+    \centering   % centers content horizontally
+    
+    {\Huge \textbf{CONCLUSION}} % \Huge makes it big, \textbf makes it bold
+
+\end{frame}
+
 \begin{frame}{Key Findings}
 \begin{enumerate}
     \item \textbf{Vanilla mode demonstrates the problem}
@@ -551,33 +612,33 @@ fair & \textcolor{green!50!black}{\textbf{4/4}} & \textcolor{green!50!black}{\te
 \end{block}
 \end{frame}
 
-\begin{frame}{Future Directions}
-\begin{itemize}
-    \item \textbf{Advanced mechanisms}:
-    \begin{itemize}
-        \item Priority-based scheduling
-        \item Adaptive algorithms based on workload
-    \end{itemize}
+% \begin{frame}{Future Directions}
+% \begin{itemize}
+%     \item \textbf{Advanced mechanisms}:
+%     \begin{itemize}
+%         \item Priority-based scheduling
+%         \item Adaptive algorithms based on workload
+%     \end{itemize}
     
-    \vspace{0.3cm}
+%     \vspace{0.3cm}
     
-    \item \textbf{Lock-free alternatives}:
-    \begin{itemize}
-        \item Atomic operations
-        \item Read-Copy-Update (RCU)
-        \item Compare-and-swap patterns
-    \end{itemize}
+%     \item \textbf{Lock-free alternatives}:
+%     \begin{itemize}
+%         \item Atomic operations
+%         \item Read-Copy-Update (RCU)
+%         \item Compare-and-swap patterns
+%     \end{itemize}
     
-    \vspace{0.3cm}
+%     \vspace{0.3cm}
     
-    \item \textbf{Performance optimization}:
-    \begin{itemize}
-        \item NUMA architecture considerations
-        \item Cache-line alignment
-        \item Fine-grained locking
-    \end{itemize}
-\end{itemize}
-\end{frame}
+%     \item \textbf{Performance optimization}:
+%     \begin{itemize}
+%         \item NUMA architecture considerations
+%         \item Cache-line alignment
+%         \item Fine-grained locking
+%     \end{itemize}
+% \end{itemize}
+% \end{frame}
 
 \begin{frame}{Conclusion}
 \begin{block}{Summary}
@@ -597,15 +658,17 @@ fair & \textcolor{green!50!black}{\textbf{4/4}} & \textcolor{green!50!black}{\te
     \item Open-source educational material
 \end{itemize}
 \end{block}
+\end{frame}
 
+\begin{frame}{Thank You}
 \vspace{0.5cm}
 
 \centering
-\Large{\textbf{Thank You!}}
+\Large{\textbf{Thank You for listening!}}
 
 \vspace{0.3cm}
 
-\normalsize{Questions?}
+% \normalsize{Questions?}
 \end{frame}
 
 \end{document}

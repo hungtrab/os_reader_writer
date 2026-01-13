@@ -23,24 +23,24 @@ bool running = true;
 
 // Predefined sentences for writers to cycle through
 const char* sentences[] = {
-    "A",  // Very short - 1 char
-    "Hello World!",  // Short - 12 chars
+    "A",
+    "Hello World!",
     "The quick brown fox jumps over the lazy dog.",
     "Operating systems manage hardware and software resources.",
-    "X",  // Very short - 1 char
+    "X",
     "Synchronization prevents race conditions in concurrent programs.",
     "Readers and writers must coordinate access to shared data.",
-    "Race!",  // Very short - 5 chars
+    "Race!",
     "Mutual exclusion ensures only one writer at a time.",
     "Pthread library provides powerful threading primitives.",
     "Concurrency bugs are difficult to reproduce and debug consistently.",
-    "AB",  // Very short - 2 chars
+    "AB",
     "Memory barriers ensure proper ordering of operations across cores.",
     "Deadlock occurs when threads wait indefinitely for each other.",
-    "Test",  // Short - 4 chars
+    "Test",
     "Lock-free data structures use atomic operations for synchronization.",
     "Thread pools improve performance by reusing worker threads efficiently.",
-    "!",  // Very short - 1 char
+    "!",
     "Context switching between threads has performance overhead costs.",
     "Critical sections must be kept as short as possible for efficiency."
 };
