@@ -1,6 +1,7 @@
-\documentclass[12pt,a4paper]{article}
+\documentclass[12pt]{article}
 \usepackage[utf8]{inputenc}
-\usepackage[margin=1in]{geometry}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
 \usepackage{amsmath}
 \usepackage{algorithm}
 \usepackage{algorithmic}
@@ -9,33 +10,89 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{cite}
-\usepackage{float}
 \usepackage{enumitem}
+\usepackage{float}
 \usepackage{caption}
 \usepackage{subcaption}
 
 % Code listing settings
 \lstset{
     language=C,
-    basicstyle=\ttfamily\small,
-    keywordstyle=\color{blue}\bfseries,
-    commentstyle=\color{green!60!black},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
     stringstyle=\color{red},
     showstringspaces=false,
     breaklines=true,
     frame=single,
     numbers=left,
-    numberstyle=\tiny\color{gray},
-    captionpos=b
+    numberstyle=\tiny\color{gray}
 }
 
-\title{\textbf{The Reader-Writer Problem: \\ A Comprehensive Study of Synchronization Strategies in Concurrent Systems}}
-\author{Operating Systems Course Project}
+\lstdefinestyle{bash}{
+    language=bash,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black}
+}
+
+\title{\textbf{The Reader-Writer Problem:} \\
+\large Implementation and Analysis of Synchronization Strategies}
+
+\author{
+Tran Quang Hung - 20235502\\
+Nguyen Xuan Khai - 20235508\\
+\\
+\textit{Hanoi University of Science and Technology}\\
+\textit{Supervisor: PhD. Do Quoc Huy}
+}
+
 \date{\today}
 
 \begin{document}
 
-\maketitle
+% Custom Title Page with Logo
+\begin{titlepage}
+    \begin{center}
+        % Logo SOICT HUST
+        \includegraphics[width=0.8\textwidth]{media/soict_hust_logo.png}
+        
+        \vspace{0.5cm}
+        {\Large \textbf{HANOI UNIVERSITY OF SCIENCE AND TECHNOLOGY}}\\[0.5cm]
+        {\large School of Information and Communication Technology}\\[0.3cm]
+        \rule{\textwidth}{0.5pt}
+        
+        \vspace{2cm}
+        
+        % Title
+        {\huge \textbf{The Reader-Writer Problem:}}\\[0.5cm]
+        {\LARGE Implementation and Analysis of Synchronization Strategies}
+        
+        \vspace{1.5cm}
+        
+        % Course/Subject info
+        {\large \textbf{Operating Systems - IT3070E}}\\[0.3cm]
+        {\large Topic 6: Readers-Writers Problem}
+        
+        \vspace{1.5cm}
+        
+        % Authors
+        \begin{tabular}{rl}
+            \textbf{Students:} & Tran Quang Hung - 20235502 \\
+                              & Nguyen Xuan Khai - 20235508 \\[0.5cm]
+            \textbf{Supervisor:} & PhD. Do Quoc Huy \\[0.5cm]
+            \textbf{Class:} & 161859
+        \end{tabular}
+        
+        \vfill
+        
+        % Bottom - Date
+        {\large Hanoi, \today}
+    \end{center}
+\end{titlepage}
+
+% Abstract on new page
+\newpage
 
 \begin{abstract}
 The Reader-Writer problem represents one of the fundamental challenges in concurrent programming and operating systems design. This paper presents a comprehensive implementation and analysis of four distinct synchronization strategies: vanilla (no synchronization), reader preference, writer preference, and fair scheduling using the turnstile pattern. We implement a shared string manipulation application to demonstrate the behavior and trade-offs of each approach. Through extensive automated testing (16 runs across 4 modes), we demonstrate race conditions in unsynchronized access (average 367 torn reads in vanilla mode) and perfect correctness in synchronized modes (0 errors in 12 runs). This work provides both theoretical analysis and practical implementation insights valuable for concurrent systems design.
@@ -53,25 +110,20 @@ The importance of this problem extends beyond academic interest. Real-world syst
 
 The classical Reader-Writer problem involves multiple concurrent threads accessing a shared resource, where:
 
-\begin{itemize}[itemsep=2pt]
-    \item \textbf{Readers} only read the shared data and do not modify it
-    \item \textbf{Writers} modify the shared data
-    \item Multiple readers may access the resource simultaneously
-    \item Writers must have exclusive access (no other readers or writers)
-    \item The system must prevent data races and ensure correctness
+\begin{itemize}
+    \item \textbf{Readers} only read data and can operate concurrently without interfering with each other
+    \item \textbf{Writers} modify data and require exclusive access (no other readers or writers)
 \end{itemize}
 
-\subsection{Challenges}
-
-Designing an effective solution requires addressing several challenges:
-
+The challenge is to design a synchronization mechanism that:
 \begin{enumerate}
-    \item \textbf{Mutual Exclusion}: Ensuring that when a writer is active, no other thread (reader or writer) can access the resource
-    \item \textbf{Concurrent Reads}: Allowing multiple readers to access the resource simultaneously for better performance
-    \item \textbf{Starvation}: Preventing indefinite delays for either readers or writers
-    \item \textbf{Deadlock Avoidance}: Ensuring the system never enters a state where threads wait indefinitely
-    \item \textbf{Performance}: Minimizing synchronization overhead while maintaining correctness
+    \item Ensures \textbf{correctness}: No data corruption from concurrent access
+    \item Maximizes \textbf{performance}: Allow as much concurrency as safely possible
+    \item Prevents \textbf{starvation}: No thread waits indefinitely
+    \item Provides \textbf{fairness}: Balanced access for all threads
 \end{enumerate}
+
+These requirements often conflict, creating fundamental trade-offs that must be carefully balanced based on workload characteristics.
 
 \subsection{Contributions}
 
@@ -79,44 +131,65 @@ This paper makes the following contributions:
 
 \begin{itemize}
     \item A unified implementation framework supporting four synchronization modes with a single API
-   \item Comprehensive automated testing demonstrating race conditions and validating correctness
-    \item Comprehensive experimental evaluation of race conditions, starvation, and fairness
+    \item Comprehensive automated testing demonstrating race conditions and validating correctness
     \item Quantitative analysis of performance trade-offs between different synchronization strategies
     \item Practical insights for implementing Reader-Writer locks in real systems
 \end{itemize}
 
-\section{Background and Related Work}
+\section{Background}
 
-\subsection{Classical Solutions}
+\subsection{The Reader-Writer Problem in Theory}
 
-The Reader-Writer problem was first formalized by Courtois et al. \cite{courtois1971concurrent}, who proposed three categories of solutions:
-
-\begin{itemize}
-    \item \textbf{First Readers-Writers Problem}: Readers have priority; writers may starve
-    \item \textbf{Second Readers-Writers Problem}: Writers have priority; readers may starve
-    \item \textbf{Third Readers-Writers Problem}: No thread should starve (fair solution)
-\end{itemize}
-
-\subsection{Synchronization Primitives}
-
-Our implementation uses POSIX threads (pthreads), which provides:
+The Reader-Writer problem was first formally described by Courtois, Heymans, and Parnas in 1971. It represents a fundamental synchronization challenge where:
 
 \begin{itemize}
-    \item \textbf{Mutex} (\texttt{pthread\_mutex\_t}): Binary locks for mutual exclusion
-    \item \textbf{Condition Variables} (\texttt{pthread\_cond\_t}): For thread signaling and waiting
+    \item Multiple readers can access shared data concurrently (read operations are non-interfering)
+    \item Writers require exclusive access (no other readers or writers during write)
+    \item Readers and writers must coordinate to prevent data corruption
 \end{itemize}
 
-While POSIX provides \texttt{pthread\_rwlock\_t}, we implement our own mechanisms to demonstrate the underlying algorithms and compare different strategies.
+\textbf{Formal Requirements:}
 
-\subsection{Real-World Implementations}
+\begin{enumerate}
+    \item \textbf{Mutual Exclusion for Writers}: At most one writer can access the resource at any time
+    \item \textbf{Concurrent Readers}: Multiple readers can access simultaneously
+    \item \textbf{No Reader-Writer Concurrency}: Writers must have exclusive access
+    \item \textbf{Progress}: Both readers and writers should eventually gain access
+    \item \textbf{Bounded Waiting}: No indefinite postponement (depends on policy)
+\end{enumerate}
 
-\textbf{Linux Kernel:} Uses \texttt{rw\_semaphore} with writer preference to prioritize critical updates.
+\subsection{Real-World Applications}
 
-\textbf{Java:} \texttt{ReentrantReadWriteLock} supports both fair and unfair modes, with unfair mode offering better throughput.
+\textbf{Database Management Systems:}
+\begin{itemize}
+    \item PostgreSQL uses Multi-Version Concurrency Control (MVCC) with reader-writer semantics
+    \item MySQL InnoDB implements row-level read-write locks
+    \item Read transactions (SELECT) can run concurrently
+    \item Write transactions (INSERT/UPDATE/DELETE) require exclusive access
+\end{itemize}
 
-\textbf{PostgreSQL:} Implements lightweight read-write locks (LWLocks) optimized for read-heavy workloads.
+\textbf{Operating Systems:}
+\begin{itemize}
+    \item Linux kernel \texttt{rwlock\_t} for shared data structures
+    \item File system metadata access (directory listings vs. file modifications)
+    \item Process synchronization in shared memory segments
+    \item Cache coherence protocols in multiprocessor systems
+\end{itemize}
 
-\section{System Design and Architecture}
+\textbf{Programming Languages:}
+\begin{itemize}
+    \item Java: \texttt{ReentrantReadWriteLock} in \texttt{java.util.concurrent}
+    \item C++17: \texttt{std::shared\_mutex} for reader-writer scenarios
+    \item Python: \texttt{RWLock} implementations in threading libraries
+    \item Rust: \texttt{RwLock<T>} providing safe concurrent access
+\end{itemize}
+
+\textbf{Web Services:}
+\begin{itemize}
+    \item Configuration caches (frequent reads, rare updates)
+    \item Session storage (many reads per user, occasional writes)
+    \item Content delivery networks (cache reads vs. purge operations)
+\end{itemize}
 
 \subsection{Overall Architecture}
 
@@ -128,32 +201,56 @@ Our system consists of three layers:
     \item \textbf{Configuration Layer}: CLI argument parsing and runtime parameter management
 \end{enumerate}
 
+This separation ensures modularity and makes it easy to extend the system with additional test scenarios.
+
 \subsection{Synchronization Primitives: Mutex vs. Semaphore}
 
-The Reader-Writer problem can be implemented using different synchronization primitives:
+The Reader-Writer problem can be implemented using different synchronization primitives. Understanding the differences is crucial for correct implementation.
 
 \textbf{Semaphore-based Solutions:}
 \begin{itemize}
-    \item Classic textbook solutions often use counting semaphores
-    \item Semaphores naturally represent resource count (e.g., concurrent readers)
-    \item Simpler conceptual model for some algorithms
+    \item Use counting semaphores to control access
+    \item Binary semaphore (value 0 or 1) acts like a mutex
+    \item Example: \texttt{sem\_wait()} and \texttt{sem\_post()} operations
+    \item Advantage: Simpler conceptual model for some algorithms
+    \item Common in classic textbook implementations
 \end{itemize}
 
 \textbf{Mutex-based Solutions (Our Implementation):}
 \begin{itemize}
-    \item Uses \texttt{pthread\_mutex\_t} for mutual exclusion
-    \item Better integration with condition variables (used in fair mode)
-    \item Clearer ownership semantics (lock/unlock pairs)
-    \item More widely supported in modern threading libraries
+    \item Use \texttt{pthread\_mutex\_t} for mutual exclusion
+    \item Better integration with POSIX condition variables
+    \item Clearer ownership semantics (thread that locks must unlock)
+    \item Widely supported across platforms
+    \item Easier debugging (can track which thread owns lock)
 \end{itemize}
 
-\textbf{Our Choice:} We implement all synchronization modes using \textbf{mutexes}. Both approaches are equally valid—the choice is pragmatic. The algorithmic patterns (reader preference, writer preference, turnstile fairness) remain identical regardless of the underlying primitive.
+\textbf{Critical Clarification:}
+
+It's essential to understand that:
+\begin{itemize}
+    \item \textbf{Mutex and Semaphore} are \textit{synchronization primitives} (building blocks)
+    \item \textbf{Reader Preference, Writer Preference, Fair Scheduling} are \textit{algorithms} (strategies)
+    \item The same algorithm can be implemented using different primitives
+    \item Our choice of mutex vs. semaphore doesn't change the fundamental algorithm
+\end{itemize}
+
+\subsection{Why POSIX Threads?}
+
+Our implementation uses POSIX threads (pthreads), which provides:
+\begin{itemize}
+    \item \textbf{Mutexes}: For mutual exclusion (\texttt{pthread\_mutex\_t})
+    \item \textbf{Condition Variables}: For thread coordination (\texttt{pthread\_cond\_t})
+    \item \textbf{Thread Management}: Creation, joining, cancellation
+    \item \textbf{Platform Independence}: Works on Linux, Unix, macOS
+    \item \textbf{Industry Standard}: Widely used in production systems
+\end{itemize}
 
 \subsection{Unified Lock API}
 
-We designed a single API that supports all four synchronization modes:
+We designed a unified API that supports all four synchronization modes with a single interface:
 
-\begin{lstlisting}[caption={Unified Reader-Writer Lock API}]
+\begin{lstlisting}
 typedef enum {
     VANILLA,      // No synchronization
     READER_PREF,  // Reader preference
@@ -163,15 +260,16 @@ typedef enum {
 
 typedef struct {
     rw_mode_t mode;
-    int active_readers;
-    int active_writers;
-    int waiting_writers;
-    pthread_mutex_t mutex;
-    pthread_mutex_t resource_lock;
-    pthread_mutex_t read_try;
-    pthread_mutex_t queue_lock;
+    int active_readers;    // Currently reading
+    int active_writers;    // Currently writing (0 or 1)
+    int waiting_writers;   // Waiting to write
+    pthread_mutex_t mutex;         // Protects counters
+    pthread_mutex_t resource_lock; // Protects shared resource
+    pthread_mutex_t read_try;      // For writer preference
+    pthread_mutex_t queue_lock;    // For fair mode (turnstile)
 } rw_lock_t;
 
+// API Functions
 void rw_init(rw_lock_t *lock, rw_mode_t mode);
 void reader_enter(rw_lock_t *lock);
 void reader_exit(rw_lock_t *lock);
@@ -180,29 +278,20 @@ void writer_exit(rw_lock_t *lock);
 void rw_destroy(rw_lock_t *lock);
 \end{lstlisting}
 
+\textbf{Design Benefits:}
+
+\begin{enumerate}
+    \item \textbf{Mode Isolation}: Each mode's logic is contained in switch-case statements
+    \item \textbf{Easy Comparison}: Switch modes with a single parameter change
+    \item \textbf{Consistent Interface}: Same API regardless of synchronization strategy
+    \item \textbf{Performance Fairness}: All modes use same infrastructure, differences are purely algorithmic
+\end{enumerate}
+
 This design allows easy comparison between modes by simply changing the mode parameter, ensuring that performance differences are due to the synchronization strategy rather than implementation variations.
-
-\subsection{Thread-Safe Logging}
-
-To observe concurrent behavior without introducing additional synchronization issues, we implement a thread-safe logger with millisecond-precision timestamps:
-
-\begin{lstlisting}[caption={Logger Interface}]
-void log_init(void);
-void log_message(thread_type_t type, 
-                 int id, 
-                 const char *action, ...);
-void log_destroy(void);
-\end{lstlisting}
-
-The logger uses a dedicated mutex to serialize log writes, producing output like:
-\begin{verbatim}
-[21:32:08.801] [R5] read prime_count = 53
-[21:32:08.806] [W1] found prime 1009, count = 54
-\end{verbatim}
 
 \section{Implementation Details}
 
-
+\subsection{Shared String Manipulation}
 
 \subsubsection{Overview}
 
@@ -213,216 +302,408 @@ This implementation demonstrates \textit{torn reads}--partial visibility of upda
 \textbf{Writer Behavior:} Writers cycle through predefined sentences:
 
 \begin{lstlisting}
-const char* sentences[] = {
-    "The quick brown fox jumps over the lazy dog.",
-    "Operating systems manage hardware and software...",
-    "Synchronization prevents race conditions...",
-    "Readers and writers must coordinate access..."
-};
-\end{lstlisting}
-
-In vanilla mode, writers deliberately use slow character-by-character copying:
-
-\begin{lstlisting}
-for (int i = 0; sentence[i] != '\0'; i++) {
-    shared_string[i] = sentence[i];
-    usleep(100);  // Increase race window
+writer_enter(&lock);
+if (mode == VANILLA) {
+    // Copy char-by-char with delay (to increase race probability)
+    for (int i = 0; sentence[i] != '\0'; i++) {
+        shared_string[i] = sentence[i];
+        usleep(100);  // Intentional delay
+    }
+} else {
+    strncpy(shared_string, sentence, STRING_SIZE - 1);
 }
+writer_exit(&lock);
 \end{lstlisting}
 
-\textbf{Reader Behavior:} Readers copy the string and print it:
+\textbf{Reader Behavior:} Readers read and validate strings:
 
 \begin{lstlisting}
 reader_enter(&lock);
-strncpy(local_buffer, shared_string, SIZE-1);
+strncpy(buffer, shared_string, STRING_SIZE - 1);
 reader_exit(&lock);
-log_message(READER, id, "read: \"%s\"", local_buffer);
+
+// Validate against known valid sentences
+if (string_not_in_valid_set(buffer)) {
+    // TORN READ DETECTED!
+}
 \end{lstlisting}
 
-\subsubsection{Torn Read Demonstration}
+\subsubsection{Race Condition Demonstration}
 
-Without synchronization, readers can observe intermediate states during a write operation. For example, when Writer 1 is changing the string from sentence A to sentence B, a reader might see:
+Without synchronization, readers can observe \textit{torn reads}--strings that are partially updated:
 
+\textbf{Example Timeline:}
 \begin{verbatim}
-Original A: "Operating systems manage hardware..."
-Original B: "Synchronization prevents race conditions..."
-Torn Read:  "Syncating systems manage hardware..."
-             ^^^^ from B    ^^^^ from A
+t=0:  shared_string = "Hello World!"
+t=1:  W1 starts writing "Operating systems..."
+      shared_string = "Oerating World!"  (partial)
+t=2:  R1 reads: "Oerating World!"  <- TORN READ!
+t=3:  W1 continues...
 \end{verbatim}
 
-This occurs because the reader accessed the string while the writer was in the middle of copying characters from sentence B, having only partially overwritten sentence A.
-
-\subsubsection{Experimental Examples}
-
-Real torn reads observed during testing:
-
-\begin{enumerate}
-    \item \texttt{"Syncating systems manage hardware..."}
-    \item \texttt{"Meaders and writers must coordinate..."}
-    \item \texttt{"...race conditions in conresources."}
-\end{enumerate}
-
-These demonstrate clear evidence of concurrent access without proper synchronization.
+These torn reads represent real data corruption that would occur in production systems without proper synchronization.
 
 \section{Synchronization Algorithms}
 
 \subsection{Mode 1: Vanilla (No Synchronization)}
 
-\begin{algorithm}[H]
-\caption{Vanilla Mode - No Synchronization}
-\begin{algorithmic}
-\STATE \textbf{reader\_enter}():
-\STATE \quad active\_readers $\leftarrow$ active\_readers + 1
-\STATE \quad // No locks - intentionally unsafe
-\STATE
-\STATE \textbf{reader\_exit}():
-\STATE \quad active\_readers $\leftarrow$ active\_readers - 1
-\STATE
-\STATE \textbf{writer\_enter}():
-\STATE \quad active\_writers $\leftarrow$ active\_writers + 1
-\STATE \quad // No locks - intentionally unsafe
-\STATE
-\STATE \textbf{writer\_exit}():
-\STATE \quad active\_writers $\leftarrow$ active\_writers - 1
-\end{algorithmic}
-\end{algorithm}
+\textbf{Purpose:} Baseline to demonstrate race conditions.
 
-\textbf{Purpose:} Educational demonstration of race conditions.
+\begin{lstlisting}
+void reader_enter(rw_lock_t *lock) {
+    if (lock->mode == VANILLA) {
+        lock->active_readers++;  // NO LOCK!
+        return;
+    }
+}
+\end{lstlisting}
 
-\textbf{Properties:}
-\begin{itemize}
-    \item No mutual exclusion
-    \item No blocking overhead
-    \item High probability of data corruption
-    \item Not safe for production use
-\end{itemize}
+This mode deliberately has no synchronization to demonstrate the problem. \textbf{Never use in production.}
 
 \subsection{Mode 2: Reader Preference}
 
-\begin{algorithm}[H]
-\caption{Reader Preference Algorithm}
-\begin{algorithmic}
-\STATE \textbf{reader\_enter}():
-\STATE \quad lock(mutex)
-\STATE \quad read\_count $\leftarrow$ read\_count + 1
-\IF{read\_count == 1}
-    \STATE \quad lock(resource\_lock) \COMMENT{First reader}
-\ENDIF
-\STATE \quad unlock(mutex)
-\STATE
-\STATE \textbf{reader\_exit}():
-\STATE \quad lock(mutex)
-\STATE \quad read\_count $\leftarrow$ read\_count - 1
-\IF{read\_count == 0}
-    \STATE \quad unlock(resource\_lock) \COMMENT{Last reader}
-\ENDIF
-\STATE \quad unlock(mutex)
-\STATE
-\STATE \textbf{writer\_enter}():
-\STATE \quad lock(resource\_lock) \COMMENT{Wait for all readers}
-\STATE \quad active\_writers $\leftarrow$ 1
-\STATE
-\STATE \textbf{writer\_exit}():
-\STATE \quad active\_writers $\leftarrow$ 0
-\STATE \quad unlock(resource\_lock)
-\end{algorithmic}
-\end{algorithm}
+\textbf{Algorithm:} First reader locks resource, subsequent readers only increment counter.
 
-\textbf{Correctness Proof Sketch:}
+\begin{lstlisting}
+void reader_enter(rw_lock_t *lock) {
+    pthread_mutex_lock(&lock->mutex);
+    lock->active_readers++;
+    if (lock->active_readers == 1) {
+        pthread_mutex_lock(&lock->resource_lock);
+    }
+    pthread_mutex_unlock(&lock->mutex);
+}
 
-\textit{Invariant 1:} If any reader is in critical section, \texttt{resource\_lock} is held.
+void reader_exit(rw_lock_t *lock) {
+    pthread_mutex_lock(&lock->mutex);
+    lock->active_readers--;
+    if (lock->active_readers == 0) {
+        pthread_mutex_unlock(&lock->resource_lock);
+    }
+    pthread_mutex_unlock(&lock->mutex);
+}
+\end{lstlisting}
 
-\textit{Invariant 2:} Writers must acquire \texttt{resource\_lock}, which is held by readers.
+\textbf{Advantages:}
+\begin{itemize}
+    \item Maximizes read throughput
+    \item Multiple readers operate concurrently
+    \item Low reader latency
+\end{itemize}
 
-\textit{Conclusion:} Writers cannot enter while readers are active. 
-
-\textbf{Starvation:} If readers arrive continuously (arrival rate $> $ service rate), writers may wait indefinitely. This is the \textit{first readers-writers problem}.
+\textbf{Disadvantage:} Writer starvation--if readers continuously arrive, writers may wait indefinitely.
 
 \subsection{Mode 3: Writer Preference}
 
-\begin{algorithm}[H]
-\caption{Writer Preference Algorithm}
-\begin{algorithmic}
-\STATE \textbf{reader\_enter}():
-\STATE \quad lock(read\_try) \COMMENT{Blocked by waiting writers}
-\STATE \quad lock(mutex)
-\STATE \quad read\_count $\leftarrow$ read\_count + 1
-\IF{read\_count == 1}
-    \STATE \quad lock(resource\_lock)
-\ENDIF
-\STATE \quad unlock(mutex)
-\STATE \quad unlock(read\_try)
-\STATE
-\STATE \textbf{reader\_exit}():
-\STATE \quad lock(mutex)
-\STATE \quad read\_count $\leftarrow$ read\_count - 1
-\IF{read\_count == 0}
-    \STATE \quad unlock(resource\_lock)
-\ENDIF
-\STATE \quad unlock(mutex)
-\STATE
-\STATE \textbf{writer\_enter}():
-\STATE \quad lock(mutex)
-\STATE \quad waiting\_writers $\leftarrow$ waiting\_writers + 1
-\STATE \quad unlock(mutex)
-\STATE \quad lock(read\_try) \COMMENT{Block new readers}
-\STATE \quad lock(resource\_lock)
-\STATE \quad lock(mutex)
-\STATE \quad waiting\_writers $\leftarrow$ waiting\_writers - 1
-\STATE \quad active\_writers $\leftarrow$ 1
-\STATE \quad unlock(mutex)
-\STATE
-\STATE \textbf{writer\_exit}():
-\STATE \quad active\_writers $\leftarrow$ 0
-\STATE \quad unlock(resource\_lock)
-\STATE \quad unlock(read\_try) \COMMENT{Allow readers}
-\end{algorithmic}
-\end{algorithm}
+\textbf{Algorithm:} Writers block new readers using \texttt{read\_try} lock.
 
-\textbf{Key Mechanism:} The \texttt{read\_try} mutex acts as a gate. When a writer is waiting, it holds \texttt{read\_try}, preventing new readers from entering.
+\begin{lstlisting}
+void writer_enter(rw_lock_t *lock) {
+    pthread_mutex_lock(&lock->mutex);
+    lock->waiting_writers++;
+    pthread_mutex_unlock(&lock->mutex);
+    
+    pthread_mutex_lock(&lock->read_try);  // Block new readers
+    pthread_mutex_lock(&lock->resource_lock);
+    
+    pthread_mutex_lock(&lock->mutex);
+    lock->waiting_writers--;
+    pthread_mutex_unlock(&lock->mutex);
+}
 
-\textbf{Starvation:} Readers may starve if writers arrive continuously.
+void reader_enter(rw_lock_t *lock) {
+    pthread_mutex_lock(&lock->read_try);  // Must acquire first
+    pthread_mutex_lock(&lock->mutex);
+    lock->active_readers++;
+    if (lock->active_readers == 1) {
+        pthread_mutex_lock(&lock->resource_lock);
+    }
+    pthread_mutex_unlock(&lock->mutex);
+    pthread_mutex_unlock(&lock->read_try);
+}
+\end{lstlisting}
 
-\subsection{Mode 4: Fair (Turnstile)}
+\textbf{Advantages:}
+\begin{itemize}
+    \item Prevents writer starvation
+    \item Ensures timely updates
+\end{itemize}
 
-\begin{algorithm}[H]
-\caption{Fair Scheduling with Turnstile}
-\begin{algorithmic}
-\STATE \textbf{reader\_enter}():
-\STATE \quad lock(queue\_lock) \COMMENT{Turnstile - FIFO order}
-\STATE \quad lock(mutex)
-\STATE \quad read\_count $\leftarrow$ read\_count + 1
-\IF{read\_count == 1}
-    \STATE \quad lock(resource\_lock)
-\ENDIF
-\STATE \quad unlock(mutex)
-\STATE \quad unlock(queue\_lock) \COMMENT{Pass through}
-\STATE
-\STATE \textbf{reader\_exit}():
-\STATE \quad lock(mutex)
-\STATE \quad read\_count $\leftarrow$ read\_count - 1
-\IF{read\_count == 0}
-    \STATE \quad unlock(resource\_lock)
-\ENDIF
-\STATE \quad unlock(mutex)
-\STATE
-\STATE \textbf{writer\_enter}():
-\STATE \quad lock(queue\_lock) \COMMENT{Turnstile - FIFO order}
-\STATE \quad lock(resource\_lock)
-\STATE \quad active\_writers $\leftarrow$ 1
-\STATE \quad unlock(queue\_lock) \COMMENT{Pass through}
-\STATE
-\STATE \textbf{writer\_exit}():
-\STATE \quad active\_writers $\leftarrow$ 0
-\STATE \quad unlock(resource\_lock)
-\end{algorithmic}
-\end{algorithm}
+\textbf{Disadvantage:} Reader starvation--continuous writers can delay readers significantly.
 
-\textbf{Fairness Property:} All threads must acquire \texttt{queue\_lock} before proceeding. Since mutex acquisition is FIFO in pthreads (under contention), this approximates a fair queue.
+\subsection{Mode 4: Fair Scheduling (Turnstile Pattern)}
 
-\textbf{Readers can still batch:} Once a reader passes the turnstile, subsequent readers can enter in parallel (before a waiting writer gets the turnstile). This preserves read concurrency while preventing starvation.
+\textbf{Algorithm:} All threads pass through a \texttt{queue\_lock} "turnstile" ensuring FIFO ordering.
 
-\textbf{No Starvation:} Both readers and writers make progress in approximate FIFO order. 
+\begin{lstlisting}
+void reader_enter(rw_lock_t *lock) {
+    pthread_mutex_lock(&lock->queue_lock);  // Turnstile
+    pthread_mutex_lock(&lock->mutex);
+    lock->active_readers++;
+    if (lock->active_readers == 1) {
+        pthread_mutex_lock(&lock->resource_lock);
+    }
+    pthread_mutex_unlock(&lock->mutex);
+    pthread_mutex_unlock(&lock->queue_lock);
+}
+
+void writer_enter(rw_lock_t *lock) {
+    pthread_mutex_lock(&lock->queue_lock);  // Turnstile
+    pthread_mutex_lock(&lock->resource_lock);
+    pthread_mutex_unlock(&lock->queue_lock);
+}
+\end{lstlisting}
+
+\textbf{Advantages:}
+\begin{itemize}
+    \item No starvation for either readers or writers
+    \item FIFO ordering ensures fairness
+    \item Predictable latency
+\end{itemize}
+
+\textbf{Disadvantage:} Slight throughput reduction due to extra lock overhead.
+
+\section{Detailed Algorithm Analysis and Implementation Insights}
+
+\subsection{Comprehensive Strategy Comparison}
+
+\begin{table}[H]
+\centering
+\caption{Detailed Mode Comparison Matrix}
+\small
+\begin{tabular}{|l|p{2cm}|p{2cm}|p{2cm}|p{2cm}|}
+\hline
+\textbf{Property} & \textbf{Vanilla} & \textbf{Read Pref} & \textbf{Write Pref} & \textbf{Fair} \\ \hline
+Data Integrity & X None & OK Full & OK Full & OK Full \\ \hline
+Read Concurrency & Yes (unsafe) & Yes (safe) & Yes (safe) & Yes (safe) \\ \hline
+Write Exclusivity & X No & OK Yes & OK Yes & OK Yes \\ \hline
+Reader Starvation Risk & None & None & High & None \\ \hline
+Writer Starvation Risk & None & High & None & None \\ \hline
+Lock Overhead & 0 mutexes & 2 mutexes & 3 mutexes & 3 mutexes \\ \hline
+Code Complexity & Trivial & Low & Medium & Medium \\ \hline
+Best Use Case & None (demo) & 90\%+ reads & Write-heavy & Mixed \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Lock Acquisition Ordering}
+
+One critical aspect of correct implementation is consistent lock ordering to prevent deadlocks.
+
+\textbf{Lock Hierarchy (must be respected):}
+\begin{enumerate}
+    \item \texttt{queue\_lock} (Fair mode turnstile) - highest priority
+    \item \texttt{read\_try} (Writer Preference reader blocker)
+    \item \texttt{mutex} (Counter protection)
+    \item \texttt{resource\_lock} (Shared resource protection) - lowest priority
+\end{enumerate}
+
+Violating this order can cause deadlock between threads.
+
+\subsection{Why the Counter Protection Mutex is Essential}
+
+Students often ask: "Why do we need \texttt{mutex} if we already have \texttt{resource\_lock}?"
+
+\textbf{Answer:} They serve different purposes!
+
+\begin{itemize}
+    \item \texttt{resource\_lock}: Protects the shared data (\texttt{shared\_string})
+    \item \texttt{mutex}: Protects the synchronization logic (counters and conditions)
+\end{itemize}
+
+\textbf{Broken Implementation Without \texttt{mutex}:}
+
+\begin{lstlisting}
+void reader_enter(rw_lock_t *lock) {
+    // WRONG - no mutex protection!
+    lock->active_readers++;  // Race condition here!
+    if (lock->active_readers == 1) {
+        pthread_mutex_lock(&lock->resource_lock);
+    }
+}
+\end{lstlisting}
+
+\textbf{Failure Scenario Timeline:}
+
+\begin{table}[H]
+\centering
+\caption{Race Condition on Counter Without Mutex}
+\begin{tabular}{|c|l|l|c|}
+\hline
+\textbf{Time} & \textbf{Reader 1} & \textbf{Reader 2} & \textbf{active\_readers} \\ \hline
+$t_0$ & & & 0 \\ \hline
+$t_1$ & LOAD active\_readers (0) & & 0 \\ \hline
+$t_2$ & & LOAD active\_readers (0) & 0 \\ \hline
+$t_3$ & ADD 1 $\rightarrow$ 1 & & 0 \\ \hline
+$t_4$ & & ADD 1 $\rightarrow$ 1 & 0 \\ \hline
+$t_5$ & STORE 1 & & 1 \\ \hline
+$t_6$ & & STORE 1 & 1 (WRONG!) \\ \hline
+$t_7$ & if (1 == 1) TRUE & & 1 \\ \hline
+$t_8$ & & if (1 == 1) TRUE & 1 \\ \hline
+$t_9$ & lock(resource\_lock) OK & & 1 \\ \hline
+$t_{10}$ & & lock(resource\_lock) DEADLOCK! & 1 \\ \hline
+\end{tabular}
+\end{table}
+
+\textbf{The Problem:} Both readers think they are the "first" reader, both try to lock \texttt{resource\_lock}.
+
+\textbf{The Solution:} Use \texttt{mutex} to make the entire check-and-lock sequence atomic:
+
+\begin{lstlisting}
+void reader_enter(rw_lock_t *lock) {
+    pthread_mutex_lock(&lock->mutex);  // Atomicity start
+    lock->active_readers++;
+    if (lock->active_readers == 1) {
+        pthread_mutex_lock(&lock->resource_lock);
+    }
+    pthread_mutex_unlock(&lock->mutex);  // Atomicity end
+}
+\end{lstlisting}
+
+Now only ONE thread sees \texttt{active\_readers == 1}, preventing the double-lock scenario.
+
+\subsection{Turnstile Pattern Deep Dive}
+
+The turnstile pattern is elegant but often confusing. Let's analyze it thoroughly.
+
+\textbf{Physical Analogy:} Imagine a subway turnstile:
+\begin{itemize}
+    \item People queue in arrival order
+    \item Each person must pass through the turnstile one at a time
+    \item The turnstile itself doesn't grant access to the train (that's the \texttt{resource\_lock})
+    \item It just ensures FIFO ordering
+\end{itemize}
+
+\textbf{Code Implementation:}
+
+\begin{lstlisting}
+void reader_enter(rw_lock_t *lock) {
+    pthread_mutex_lock(&lock->queue_lock);    // [A] Enter turnstile
+    pthread_mutex_lock(&lock->mutex);         // [B] Access counters
+    lock->active_readers++;
+    if (lock->active_readers == 1) {
+        pthread_mutex_lock(&lock->resource_lock); // [C] First reader locks resource
+    }
+    pthread_mutex_unlock(&lock->mutex);       // [D] Release counters
+    pthread_mutex_unlock(&lock->queue_lock);  // [E] Exit turnstile
+    // Now reading...
+}
+\end{lstlisting}
+
+\textbf{Key Insight:} Steps [B], [C], [D] happen while holding \texttt{queue\_lock}. This means no other thread (reader OR writer) can start these steps until current thread completes them.
+
+\textbf{Fairness Demonstration:}
+
+Arrival sequence: R1 → W1 → R2
+
+\textit{Without Turnstile (Reader Preference):}
+\begin{enumerate}
+    \item R1 enters, \texttt{active\_readers = 1}, locks \texttt{resource\_lock}
+    \item W1 tries to lock \texttt{resource\_lock}, BLOCKS
+    \item R2 enters, \texttt{active\_readers = 2} (doesn't need \texttt{resource\_lock})
+    \item R2 starts reading even though W1 was waiting! UNFAIR!
+\end{enumerate}
+
+\textit{With Turnstile (Fair):}
+\begin{enumerate}
+    \item R1 locks \texttt{queue\_lock}, enters, unlocks \texttt{queue\_lock}
+    \item W1 tries \texttt{queue\_lock}, must wait for R1
+    \item R1 finishes setup, releases \texttt{queue\_lock}
+    \item W1 gets \texttt{queue\_lock}, but R1 still reading
+    \item R2 tries \texttt{queue\_lock}, BLOCKS (W1 owns it)
+    \item R1 finishes, W1 can now lock \texttt{resource\_lock}
+    \item W1 finishes, releases \texttt{queue\_lock}
+    \item R2 gets \texttt{queue\_lock} → FAIR!
+\end{enumerate}
+
+\subsection{Implementation Challenges}\subsubsection{Challenge 1: Avoiding Deadlock}
+
+With multiple locks, deadlock is a real risk. Our solution: consistent lock ordering.
+
+\textbf{Deadlock Scenario:}
+\begin{verbatim}
+Thread A: lock(X) -> lock(Y)
+Thread B: lock(Y) -> lock(X)  // DEADLOCK!
+\end{verbatim}
+
+\textbf{Our Prevention:} Always acquire in same order: \texttt{queue\_lock} → \texttt{read\_try} → \texttt{mutex} → \texttt{resource\_lock}
+
+\subsubsection{Challenge 2: Spurious Wakeups}
+
+Though we don't use condition variables in current implementation (could be future enhancement), production systems must handle spurious wakeups:
+
+\begin{lstlisting}
+// Always use while, not if!
+while (condition_not_met) {
+    pthread_cond_wait(&cond, &mutex);
+}
+\end{lstlisting}
+
+\subsubsection{Challenge 3: Integer Overflow}
+
+\textbf{Risk:} Theoretically, \texttt{active\_readers} could overflow with billions of readers.
+
+\textbf{Mitigations:}
+\begin{itemize}
+    \item Use \texttt{unsigned long} or \texttt{uint64\_t} instead of \texttt{int}
+    \item Add bounds checking: \texttt{if (active\_readers >= MAX\_READERS) return EAGAIN;}
+    \item Our demo uses \texttt{int} for simplicity
+\end{itemize}
+
+\subsection{Performance Considerations}
+
+\textbf{Lock Contention:}
+\begin{itemize}
+    \item \texttt{mutex} is hot - every reader and writer touches it
+    \item Cache line bouncing on multi-core systems
+    \item Solution: RCU (Read-Copy-Update) for read-heavy scenarios
+\end{itemize}
+
+\textbf{Context Switching:}
+\begin{itemize}
+    \item Blocking on mutex causes context switch (~1-10 microseconds)
+    \item Multiplied by hundreds of operations = significant overhead
+    \item Trade-off: Correctness vs. raw performance
+\end{itemize}
+
+\subsection{Thread-Safe Logging Implementation}
+
+Our logger prevents interleaved output from concurrent threads:
+
+\begin{lstlisting}
+typedef struct {
+    pthread_mutex_t log_mutex;
+    bool initialized;
+} logger_t;
+
+void log_message(thread_type_t type, int id, const char* format, ...) {
+    pthread_mutex_lock(&logger.log_mutex);
+    
+    // Generate timestamp
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    struct tm *tm_info = localtime(&ts.tv_sec);
+    
+    // Print atomic log entry
+    printf("[%02d:%02d:%02d.%03ld] [%s%d] ",
+           tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec,
+           ts.tv_nsec / 1000000,
+           type == THREAD_READER ? "R" : "W", id);
+    
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+    
+    printf("\n");
+    fflush(stdout);
+    
+    pthread_mutex_unlock(&logger.log_mutex);
+}
+\end{lstlisting}
+
+Without \texttt{log\_mutex}, output would be garbled:\begin{verbatim}
+[12:34[12:34:56.123] :56.124] [R[W1] 2] read: wrote: "Hello""Wor
+\end{verbatim}
 
 \section{Experimental Evaluation}
 
@@ -456,7 +737,6 @@ These demonstrate clear evidence of concurrent access without proper synchroniza
 
 \subsection{Actual Results}
 
-\textbf{Session ID:} 20260113\_004235
 
 \begin{table}[H]
 \centering
@@ -496,6 +776,16 @@ fair & 4/4 & 0 \\ \hline
     \item Results reproducible across sessions
 \end{enumerate}
 
+\subsection{Statistical Significance}
+
+With 16 total runs:
+\begin{itemize}
+    \item Vanilla mode: 0/4 clean = 0\% success rate (expected for unsynchronized)
+    \item Synchronized modes: 12/12 clean = 100\% success rate
+    \item Total operations: Hundreds of concurrent read/write operations per run
+    \item No synchronization failures in 12 synchronized runs provides high confidence
+\end{itemize}
+
 \section{Discussion}
 
 \subsection{Correctness vs. Performance}
@@ -514,58 +804,47 @@ For production systems, correctness is non-negotiable, making the real choice be
 
 \textbf{Reader Preference:} Suitable for read-heavy workloads where:
 \begin{itemize}
-    \item Read operations vastly outnumber writes (e.g., DNS cache, configuration data)
-    \item Write latency is not critical
-    \item Occasional write delays are acceptable
+    \item 90\%+ operations are reads
+    \item Writes are infrequent and can tolerate delays
+    \item Example: Configuration caches, reference data
 \end{itemize}
 
-\textbf{Writer Preference:} Appropriate when:
+\textbf{Writer Preference:} Suitable for write-heavy scenarios where:
 \begin{itemize}
-    \item Updates are critical and must not be delayed (e.g., real-time monitoring)
-    \item Read operations can tolerate delays
-    \item Write operations modify critical state
+    \item Data freshness is critical
+    \item Writes must complete promptly
+    \item Example: Real-time monitoring, sensor data
 \end{itemize}
 
-\textbf{Fair Mode:} Best for:
+\textbf{Fair Scheduling:} Suitable for mixed workloads where:
 \begin{itemize}
-    \item Mixed workloads with no clear dominant operation type
-    \item Systems requiring predictable latency for both reads and writes
-    \item Applications where starvation is unacceptable (e.g., user-facing systems)
+    \item Both reads and writes are important
+    \item Starvation cannot be tolerated
+    \item Example: Shared services with SLAs
 \end{itemize}
 
-\subsection{Scalability Considerations}
+\subsection{Implementation Considerations}
 
 Our implementation uses coarse-grained locking (single lock for entire resource). For higher scalability, production systems use:
 
 \begin{itemize}
-    \item \textbf{Fine-grained locking}: Lock smaller portions of data
-    \item \textbf{Lock-free algorithms}: Using atomic operations and compare-and-swap
-    \item \textbf{Read-copy-update (RCU)}: Especially effective for read-dominated scenarios
+    \item \textbf{Fine-grained locking}: Multiple locks for different resource parts
+    \item \textbf{Lock-free structures}: Atomic operations (compare-and-swap)
+    \item \textbf{Read-Copy-Update (RCU)}: Used in Linux kernel
 \end{itemize}
-
-\subsection{Limitations}
-
-Our study has several limitations:
-
-\begin{enumerate}
-    \item \textbf{Single-machine testing}: No distributed system considerations
-    \item \textbf{Simulated workloads}: Real applications may have different access patterns
-    \item \textbf{No priority handling}: All threads treated equally
-    \item \textbf{Fixed time quanta}: No adaptive strategies
-\end{enumerate}
-
-Future work could address these by implementing priority-aware scheduling, adaptive policies, and distributed Reader-Writer protocols.
 
 \section{Conclusion}
 
 This paper presented a comprehensive study of the Reader-Writer synchronization problem through the implementation and evaluation of four distinct strategies. Our key findings include:
 
 \begin{enumerate}
-    \item \textbf{Race conditions are severe}: Vanilla mode demonstrated up to 88\% data loss, highlighting the critical importance of proper synchronization.
+    \item \textbf{Vanilla mode clearly demonstrates the problem}: 100\% race condition rate with 367 torn reads per run
     
-    \item \textbf{Preferential policies have trade-offs}: Reader preference maximizes read throughput but can starve writers indefinitely under high load. Writer preference ensures timely updates but may delay readers.
+    \item \textbf{All synchronized modes achieve perfect correctness}: 100\% success rate (12/12 runs)
     
-    \item \textbf{Fairness has acceptable cost}: The turnstile pattern achieves balanced fairness with only 5-15\% throughput reduction compared to preferential modes.
+    \item \textbf{Preferential policies have trade-offs}: Reader preference maximizes read throughput but risks writer starvation. Writer preference ensures timely updates but may delay readers.
+    
+    \item \textbf{Fair scheduling eliminates starvation}: The turnstile pattern achieves balanced fairness with minimal overhead.
     
     \item \textbf{One size doesn't fit all}: The optimal synchronization strategy depends on workload characteristics, latency requirements, and fairness constraints.
 \end{enumerate}
@@ -576,13 +855,11 @@ For practitioners, this work provides concrete guidance on selecting appropriate
 
 \subsection{Future Directions}
 
-Promising directions for future research include:
-
+Potential extensions include:
 \begin{itemize}
-    \item Implementing priority-based scheduling where high-priority operations bypass waiting queues
-    \item Developing adaptive algorithms that switch strategies based on runtime workload detection
-    \item Extending to distributed Reader-Writer protocols using distributed locking or consensus
-    \item Investigating lock-free and wait-free alternatives using modern CPU atomics
+    \item Priority-based scheduling with different thread priorities
+    \item Adaptive algorithms that adjust strategy based on observed workload
+    \item Lock-free implementations using atomic operations
     \item Performance evaluation on NUMA architectures with non-uniform memory access costs
 \end{itemize}
 
@@ -590,51 +867,30 @@ The complete source code, including the shared string implementation with four s
 
 \begin{thebibliography}{9}
 
-\bibitem{courtois1971concurrent}
-P.J. Courtois, F. Heymans, and D.L. Parnas,
-``Concurrent Control with Readers and Writers,''
-\textit{Communications of the ACM},
-vol. 14, no. 10, pp. 667-668, 1971.
+\bibitem{tanenbaum2014}
+Tanenbaum, A. S., \& Bos, H. (2014). 
+\textit{Modern Operating Systems} (4th ed.). 
+Pearson.
 
-\bibitem{silberschatz2018operating}
-A. Silberschatz, P.B. Galvin, and G. Gagne,
-\textit{Operating System Concepts}, 10th ed.
-Wiley, 2018.
+\bibitem{silberschatz2018}
+Silberschatz, A., Galvin, P. B., \& Gagne, G. (2018).
+\textit{Operating System Concepts} (10th ed.).
+Wiley.
 
-\bibitem{butenhof1997programming}
-D.R. Butenhof,
+\bibitem{butenhof1997}
+Butenhof, D. R. (1997).
 \textit{Programming with POSIX Threads}.
-Addison-Wesley, 1997.
+Addison-Wesley Professional.
 
-\bibitem{herlihy2020art}
-M. Herlihy, N. Shavit, V. Luchangco, and M. Spear,
-\textit{The Art of Multiprocessor Programming}, 2nd ed.
-Morgan Kaufmann, 2020.
+\bibitem{herlihy2012}
+Herlihy, M., \& Shavit, N. (2012).
+\textit{The Art of Multiprocessor Programming} (Revised 1st ed.).
+Morgan Kaufmann.
 
-\bibitem{raynal2012concurrent}
-M. Raynal,
-\textit{Concurrent Programming: Algorithms, Principles, and Foundations}.
-Springer, 2012.
-
-\bibitem{ben2006principles}
-M. Ben-Ari,
-\textit{Principles of Concurrent and Distributed Programming}, 2nd ed.
-Addison-Wesley, 2006.
-
-\bibitem{tanenbaum2014modern}
-A.S. Tanenbaum and H. Bos,
-\textit{Modern Operating Systems}, 4th ed.
-Pearson, 2014.
-
-\bibitem{andrews1991concurrent}
-G.R. Andrews,
-\textit{Concurrent Programming: Principles and Practice}.
-Benjamin/Cummings, 1991.
-
-\bibitem{downey2016little}
-A.B. Downey,
-\textit{The Little Book of Semaphores}, 2nd ed.
-Green Tea Press, 2016.
+\bibitem{courtoisbern1971}
+Courtois, P. J., Heymans, F., \& Parnas, D. L. (1971).
+Concurrent control with "readers" and "writers".
+\textit{Communications of the ACM}, 14(10), 667-668.
 
 \end{thebibliography}
 

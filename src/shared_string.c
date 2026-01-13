@@ -11,7 +11,6 @@
 #define STRING_SIZE 256
 
 // Shared resource
-char shared_string[STRING_SIZE];
 rw_lock_t lock;
 
 // Configuration
@@ -21,6 +20,7 @@ int duration = 10;  // seconds
 rw_mode_t mode = READER_PREF;
 bool running = true;
 
+char shared_string[STRING_SIZE];
 // Predefined sentences for writers to cycle through
 const char* sentences[] = {
     "A",

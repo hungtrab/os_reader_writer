@@ -21,7 +21,7 @@
 \title{OS Project}
 \subtitle{Topic 6. The Reader-Writer Problem}
 \author{Tran Quang Hung 20235502\\
-Nguyen Xuan Khai 20235501}
+Nguyen Xuan Khai 20235508}
 \institute{\large Hanoi University of Science and Technology\\
 Supervisor: PhD. Do Quoc Huy}
 \date{\today}
@@ -407,13 +407,13 @@ Baseline to demonstrate race conditions
 \begin{table}
 \centering
 \small
-\begin{tabular}{|l|c|c|c|}
+\begin{tabular}{|l|c|c|}
 \hline
-\textbf{Mode} & \textbf{Correctness} & \textbf{Starvation} & \textbf{Throughput} \\ \hline
-Vanilla & \alert{\textbf{NO}} & N/A & High \\ \hline
-Reader Pref & \textcolor{green!50!black}{YES} & Writers & Highest \\ \hline
-Writer Pref & \textcolor{green!50!black}{YES} & Readers & Medium \\ \hline
-Fair & \textcolor{green!50!black}{YES} & \textcolor{green!50!black}{None} & Medium \\ \hline
+\textbf{Mode} & \textbf{Correctness} & \textbf{Starvation} \\ \hline
+Vanilla & \alert{\textbf{NO}} & N/A \\ \hline
+Reader Pref & \textcolor{green!50!black}{YES} & Writers \\ \hline
+Writer Pref & \textcolor{green!50!black}{YES} & Readers \\ \hline
+Fair & \textcolor{green!50!black}{YES} & \textcolor{green!50!black}{None} \\ \hline
 \end{tabular}
 \end{table}
 
