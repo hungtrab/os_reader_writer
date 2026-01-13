@@ -1,0 +1,23 @@
+\frametitle{Mode 1: Vanilla (No Synchronization)}
+\begin{lstlisting}[language=C]
+void reader_enter(rw_lock_t *lock) {
+    // No synchronization!
+    lock->active_readers++;
+}
+\end{lstlisting}
+
+\vspace{0.3cm}
+
+\begin{block}{Purpose}
+Baseline to demonstrate race conditions
+\end{block}
+
+\vspace{0.3cm}
+
+\begin{alertblock}{Expected Behavior}
+\begin{itemize}
+    \item Data corruption (torn reads)
+    \item Lost updates
+    \item \textbf{DO NOT USE IN PRODUCTION!}
+\end{itemize}
+\end{alertblock}

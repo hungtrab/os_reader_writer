@@ -4,58 +4,45 @@
 \providecommand\HyField@AuxAddToCoFields[2]{}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Motivation}{1}{subsection.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Problem Statement}{1}{subsection.1.2}\protected@file@percent }
 \citation{courtois1971concurrent}
-\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Problem Statement}{2}{subsection.1.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {1.3}Challenges}{2}{subsection.1.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {1.4}Contributions}{2}{subsection.1.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {2}Background and Related Work}{3}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Classical Solutions}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Background and Related Work}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Classical Solutions}{2}{subsection.2.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Synchronization Primitives}{3}{subsection.2.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Real-World Implementations}{3}{subsection.2.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3}System Design and Architecture}{3}{section.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Overall Architecture}{3}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Unified Lock API}{4}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Synchronization Primitives: Mutex vs. Semaphore}{3}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Unified Lock API}{4}{subsection.3.3}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {1}{\ignorespaces Unified Reader-Writer Lock API}}{4}{lstlisting.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Thread-Safe Logging}{4}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Thread-Safe Logging}{4}{subsection.3.4}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {2}{\ignorespaces Logger Interface}}{4}{lstlisting.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {4}Implementation Details}{5}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Version 1: Prime Number Counter}{5}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.1}Overview}{5}{subsubsection.4.1.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.2}Race Condition Demonstration}{5}{subsubsection.4.1.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Lost Update Scenario}}{5}{table.caption.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.3}Experimental Results}{5}{subsubsection.4.1.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Version 2: Shared String}{6}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}Overview}{6}{subsubsection.4.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}Torn Read Demonstration}{6}{subsubsection.4.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.3}Experimental Examples}{7}{subsubsection.4.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Synchronization Algorithms}{7}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Mode 1: Vanilla (No Synchronization)}{7}{subsection.5.1}\protected@file@percent }
-\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Vanilla Mode - No Synchronization}}{7}{algorithm.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Mode 2: Reader Preference}{8}{subsection.5.2}\protected@file@percent }
-\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces Reader Preference Algorithm}}{8}{algorithm.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Mode 3: Writer Preference}{9}{subsection.5.3}\protected@file@percent }
-\@writefile{loa}{\contentsline {algorithm}{\numberline {3}{\ignorespaces Writer Preference Algorithm}}{9}{algorithm.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Mode 4: Fair (Turnstile)}{10}{subsection.5.4}\protected@file@percent }
-\@writefile{loa}{\contentsline {algorithm}{\numberline {4}{\ignorespaces Fair Scheduling with Turnstile}}{10}{algorithm.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6}Experimental Evaluation}{10}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Experimental Setup}{10}{subsection.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Experiment 1: Race Condition Verification}{11}{subsection.6.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Race Condition Impact}}{11}{table.caption.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Experiment 2: Writer Starvation (Reader Preference)}{11}{subsection.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Experiment 3: Reader Starvation (Writer Preference)}{12}{subsection.6.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Experiment 4: Fair Scheduling}{12}{subsection.6.5}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Fair Mode Performance}}{12}{table.caption.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.6}Experiment 5: Throughput Comparison}{12}{subsection.6.6}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Throughput Across Modes}}{12}{table.caption.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.7}Experiment 6: Comprehensive Automated Testing}{13}{subsection.6.7}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Version 1 Comprehensive Test Results}}{13}{table.caption.5}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Version 2 Comprehensive Test Results}}{13}{table.caption.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Discussion}{14}{section.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Correctness vs. Performance}{14}{subsection.7.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}When to Use Each Mode}{14}{subsection.7.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Scalability Considerations}{15}{subsection.7.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Limitations}{15}{subsection.7.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{15}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.0.1}Overview}{5}{subsubsection.4.0.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.0.2}Torn Read Demonstration}{5}{subsubsection.4.0.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.0.3}Experimental Examples}{6}{subsubsection.4.0.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Synchronization Algorithms}{6}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Mode 1: Vanilla (No Synchronization)}{6}{subsection.5.1}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Vanilla Mode - No Synchronization}}{6}{algorithm.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Mode 2: Reader Preference}{7}{subsection.5.2}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces Reader Preference Algorithm}}{7}{algorithm.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Mode 3: Writer Preference}{8}{subsection.5.3}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {3}{\ignorespaces Writer Preference Algorithm}}{8}{algorithm.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Mode 4: Fair (Turnstile)}{9}{subsection.5.4}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {4}{\ignorespaces Fair Scheduling with Turnstile}}{9}{algorithm.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Experimental Evaluation}{9}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Test Environment}{9}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Comprehensive Automated Testing}{10}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Actual Results}{10}{subsection.6.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Test Results - All 16 Runs}}{10}{table.caption.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Discussion}{11}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Correctness vs. Performance}{11}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}When to Use Each Mode}{11}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Scalability Considerations}{12}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Limitations}{12}{subsection.7.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{12}{section.8}\protected@file@percent }
 \bibcite{courtois1971concurrent}{1}
 \bibcite{silberschatz2018operating}{2}
 \bibcite{butenhof1997programming}{3}
@@ -65,5 +52,5 @@
 \bibcite{tanenbaum2014modern}{7}
 \bibcite{andrews1991concurrent}{8}
 \bibcite{downey2016little}{9}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Future Directions}{16}{subsection.8.1}\protected@file@percent }
-\gdef \@abspage@last{16}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Future Directions}{13}{subsection.8.1}\protected@file@percent }
+\gdef \@abspage@last{13}

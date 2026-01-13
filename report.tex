@@ -38,7 +38,7 @@
 \maketitle
 
 \begin{abstract}
-The Reader-Writer problem represents one of the fundamental challenges in concurrent programming and operating systems design. This paper presents a comprehensive implementation and analysis of four distinct synchronization strategies for the Reader-Writer problem: vanilla (no synchronization), reader preference, writer preference, and fair scheduling using the turnstile pattern. We implement three different applications--prime number counting, shared string manipulation, and file buffer simulation--to demonstrate the behavior and trade-offs of each synchronization approach. Through extensive experimentation, we demonstrate race conditions in unsynchronized access, starvation scenarios in preferential policies, and balanced fairness in queue-based scheduling. Our results show that vanilla mode produces up to 88\% data loss due to race conditions, reader-preference can cause indefinite writer delays under high read load, and fair scheduling successfully eliminates starvation at the cost of approximately 12-15\% throughput overhead. This work provides both theoretical analysis and practical implementation insights valuable for concurrent systems design.
+The Reader-Writer problem represents one of the fundamental challenges in concurrent programming and operating systems design. This paper presents a comprehensive implementation and analysis of four distinct synchronization strategies: vanilla (no synchronization), reader preference, writer preference, and fair scheduling using the turnstile pattern. We implement a shared string manipulation application to demonstrate the behavior and trade-offs of each approach. Through extensive automated testing (16 runs across 4 modes), we demonstrate race conditions in unsynchronized access (average 367 torn reads in vanilla mode) and perfect correctness in synchronized modes (0 errors in 12 runs). This work provides both theoretical analysis and practical implementation insights valuable for concurrent systems design.
 \end{abstract}
 
 \section{Introduction}
@@ -79,7 +79,7 @@ This paper makes the following contributions:
 
 \begin{itemize}
     \item A unified implementation framework supporting four synchronization modes with a single API
-    \item Three distinct application scenarios demonstrating different aspects of the Reader-Writer problem
+   \item Comprehensive automated testing demonstrating race conditions and validating correctness
     \item Comprehensive experimental evaluation of race conditions, starvation, and fairness
     \item Quantitative analysis of performance trade-offs between different synchronization strategies
     \item Practical insights for implementing Reader-Writer locks in real systems
@@ -124,9 +124,30 @@ Our system consists of three layers:
 
 \begin{enumerate}
     \item \textbf{Common Infrastructure Layer}: Provides unified synchronization API and logging utilities
-    \item \textbf{Application Layer}: Two different implementations demonstrating various shared resources
+    \item \textbf{Application Layer}: Shared string manipulation demonstrating concurrent access
     \item \textbf{Configuration Layer}: CLI argument parsing and runtime parameter management
 \end{enumerate}
+
+\subsection{Synchronization Primitives: Mutex vs. Semaphore}
+
+The Reader-Writer problem can be implemented using different synchronization primitives:
+
+\textbf{Semaphore-based Solutions:}
+\begin{itemize}
+    \item Classic textbook solutions often use counting semaphores
+    \item Semaphores naturally represent resource count (e.g., concurrent readers)
+    \item Simpler conceptual model for some algorithms
+\end{itemize}
+
+\textbf{Mutex-based Solutions (Our Implementation):}
+\begin{itemize}
+    \item Uses \texttt{pthread\_mutex\_t} for mutual exclusion
+    \item Better integration with condition variables (used in fair mode)
+    \item Clearer ownership semantics (lock/unlock pairs)
+    \item More widely supported in modern threading libraries
+\end{itemize}
+
+\textbf{Our Choice:} We implement all synchronization modes using \textbf{mutexes}. Both approaches are equally valid—the choice is pragmatic. The algorithmic patterns (reader preference, writer preference, turnstile fairness) remain identical regardless of the underlying primitive.
 
 \subsection{Unified Lock API}
 
@@ -181,74 +202,7 @@ The logger uses a dedicated mutex to serialize log writes, producing output like
 
 \section{Implementation Details}
 
-\subsection{Version 1: Prime Number Counter}
 
-\subsubsection{Overview}
-
-This implementation demonstrates the classic lost update problem in concurrent systems.
-
-\textbf{Shared Resource:} A global integer \texttt{prime\_count}
-
-\textbf{Writer Behavior:} Each writer thread is assigned a range of numbers $[n_i, n_i + 1000)$. For each prime $p$ found in its range, the writer executes:
-
-\begin{lstlisting}
-writer_enter(&lock);
-prime_count++;  // Critical section
-writer_exit(&lock);
-\end{lstlisting}
-
-\textbf{Reader Behavior:} Readers periodically sample the counter:
-
-\begin{lstlisting}
-reader_enter(&lock);
-int current = prime_count;  // Critical section
-reader_exit(&lock);
-log_message(READER, id, "read prime_count = %d", current);
-\end{lstlisting}
-
-\subsubsection{Race Condition Demonstration}
-
-The increment operation \texttt{prime\_count++} is not atomic. At the assembly level, it consists of three operations:
-
-\begin{verbatim}
-LOAD  prime_count -> register
-ADD   register, 1
-STORE register -> prime_count
-\end{verbatim}
-
-Without synchronization, the following interleaving can occur:
-
-\begin{table}[H]
-\centering
-\caption{Lost Update Scenario}
-\begin{tabular}{|l|l|l|l|}
-\hline
-\textbf{Time} & \textbf{Writer 1} & \textbf{Writer 2} & \textbf{prime\_count} \\ \hline
-$t_0$ & & & 50 \\ \hline
-$t_1$ & LOAD (50) & & 50 \\ \hline
-$t_2$ & & LOAD (50) & 50 \\ \hline
-$t_3$ & ADD (51) & & 50 \\ \hline
-$t_4$ & & ADD (51) & 50 \\ \hline
-$t_5$ & STORE (51) & & 51 \\ \hline
-$t_6$ & & STORE (51) & 51 \\ \hline
-\end{tabular}
-\end{table}
-
-Both writers found a prime, but \texttt{prime\_count} only increased by 1 instead of 2. This is a \textit{lost update}.
-
-\subsubsection{Experimental Results}
-
-Running vanilla mode with 1 reader and 1 writer for 10 seconds:
-
-\begin{verbatim}
-Final prime count: 20
-Expected prime count: 168
-? RACE CONDITION DETECTED: Lost updates (88% data loss)
-\end{verbatim}
-
-This demonstrates severe data corruption from unsynchronized access.
-
-\subsection{Version 2: Shared String}
 
 \subsubsection{Overview}
 
@@ -472,166 +426,45 @@ These demonstrate clear evidence of concurrent access without proper synchroniza
 
 \section{Experimental Evaluation}
 
-\subsection{Experimental Setup}
+\subsection{Test Environment}
 
-\textbf{Hardware:} Testing performed on Linux system with multi-core processor.
+\textbf{Hardware:} Multi-core processor with sufficient RAM
 
-\textbf{Software:} GCC compiler, POSIX threads library.
+\textbf{Software:} Linux OS, GCC compiler, POSIX threads
 
-\textbf{Methodology:} Each test configuration run 3 times, results averaged.
+\subsection{Comprehensive Automated Testing}
 
-\subsection{Experiment 1: Race Condition Verification}
+\textbf{Objective:} Validate system correctness through comprehensive testing.
 
-\textbf{Objective:} Quantify data corruption in vanilla mode.
-
-\textbf{Configuration:}
+\textbf{Test Configuration:}
 \begin{itemize}
-    \item Version 1 (Prime Counter)
-    \item 1 reader, 1 writer
-    \item Duration: 10 seconds
-    \item Mode: Vanilla
+    \item Total runs: 16 (4 modes × 4 runs)
+    \item Application: Shared String
+    \item Writers per run: 8 threads
+    \item Readers per run: 5 threads  
+    \item Duration per run: 8 seconds
+    \item Modes: vanilla, reader\_pref, writer\_pref, fair
 \end{itemize}
 
-\textbf{Results:}
+\textbf{Automation:}
+\begin{enumerate}
+    \item \texttt{run\_tests.sh}: Executes tests, saves timestamped logs
+    \item \texttt{analyze\_comprehensive.py}: Parses logs, detects torn reads
+    \item Valid set: 20 predefined sentences (1-70 chars)
+    \item Torn read = any string not in valid set
+\end{enumerate}
+
+\subsection{Actual Results}
+
+\textbf{Session ID:} 20260113\_004235
 
 \begin{table}[H]
 \centering
-\caption{Race Condition Impact}
-\begin{tabular}{|l|r|r|r|}
-\hline
-\textbf{Metric} & \textbf{Expected} & \textbf{Actual} & \textbf{Loss} \\ \hline
-Prime Count & 168 & 20 & 88.1\% \\ \hline
-\end{tabular}
-\end{table}
-
-\textbf{Analysis:} Massive data loss confirms the critical nature of synchronization. The non-atomic increment operation causes frequent lost updates.
-
-\subsection{Experiment 2: Writer Starvation (Reader Preference)}
-
-\textbf{Objective:} Demonstrate writer starvation under high read load.
-
-\textbf{Configuration:}
-\begin{itemize}
-    \item Version 1 (Prime Counter)
-    \item 50 readers, 2 writers
-    \item Duration: 10 seconds
-    \item Mode: Reader Preference
-\end{itemize}
-
-\textbf{Observations:}
-
-Writers experienced significant delays. Example log excerpt:
-
-\begin{verbatim}
-[21:32:08.801] [R5] read prime_count = 53
-[21:32:08.806] [R1] read prime_count = 53
-[21:32:08.818] [R2] read prime_count = 53
-...
-[massive reader activity for 8+ seconds]
-...
-[21:32:16.801] [W1] found prime 1009, count = 54
-\end{verbatim}
-
-Writers were blocked for extended periods while readers continuously entered and exited.
-
-\subsection{Experiment 3: Reader Starvation (Writer Preference)}
-
-\textbf{Configuration:}
-\begin{itemize}
-    \item Version 2 (Shared String)
-    \item 2 readers, 20 writers
-    \item Duration: 10 seconds
-    \item Mode: Writer Preference
-\end{itemize}
-
-\textbf{Result:} Readers experienced delays as writers continuously acquired \texttt{read\_try} lock, blocking new reader arrivals.
-
-\subsection{Experiment 4: Fair Scheduling}
-
-\textbf{Configuration:}
-\begin{itemize}
-    \item Version 2 (Shared String)
-    \item 10 readers, 10 writers
-    \item Duration: 10 seconds
-    \item Mode: Fair
-\end{itemize}
-
-\textbf{Results:}
-
-\begin{table}[H]
-\centering
-\caption{Fair Mode Performance}
-\begin{tabular}{|l|r|}
-\hline
-\textbf{Metric} & \textbf{Value} \\ \hline
-Total Write Ops & 733 \\ \hline
-Total Read Ops & 573 \\ \hline
-Avg Writer Wait & 8.4ms \\ \hline
-Avg Reader Wait & 9.1ms \\ \hline
-\end{tabular}
-\end{table}
-
-\textbf{Analysis:} Both readers and writers achieved reasonable throughput with balanced wait times, confirming fairness.
-
-\subsection{Experiment 5: Throughput Comparison}
-
-\textbf{Configuration:} Version 1, 5 readers, 5 writers, 30 seconds
-
-\begin{table}[H]
-\centering
-\caption{Throughput Across Modes}
-\begin{tabular}{|l|r|r|r|}
-\hline
-\textbf{Mode} & \textbf{Read Ops} & \textbf{Write Ops} & \textbf{Total} \\ \hline
-Reader Pref & 1847 & 712 & 2559 \\ \hline
-Writer Pref & 1203 & 1156 & 2359 \\ \hline
-Fair & 1456 & 964 & 2420 \\ \hline
-\end{tabular}
-\end{table}
-
-\textbf{Analysis:}
-\begin{itemize}
-    \item Reader preference maximizes read throughput
-    \item Writer preference balances read/write but reduces total throughput
-    \item Fair mode achieves balanced operations with ~5\% throughput reduction
-\end{itemize}
-
-\subsection{Experiment 6: Comprehensive Automated Testing}
-
-\textbf{Objective:} Validate system reliability through automated comprehensive testing.
-
-\textbf{Methodology:} 
-\begin{itemize}
-    \item Total runs: 32 (4 modes × 4 runs × 2 versions)
-    \item Automated execution using \texttt{run\_tests.sh}
-    \item Analysis via Python script detecting race conditions
-    \item Each run: 8 seconds, 8 readers, 5-8 writers
-\end{itemize}
-
-\textbf{Version 1 Results (Prime Counter - Lost Updates):}
-
-\begin{table}[H]
-\centering
-\caption{Version 1 Comprehensive Test Results}
-\begin{tabular}{|l|r|r|}
-\hline
-\textbf{Mode} & \textbf{Clean Runs} & \textbf{Avg Lost Updates} \\ \hline
-vanilla & 3/4 & 2.0 \\ \hline
-reader\_pref & 4/4 & 0.0 \\ \hline
-writer\_pref & 4/4 & 0.0 \\ \hline
-fair & 4/4 & 0.0 \\ \hline
-\end{tabular}
-\end{table}
-
-\textbf{Version 2 Results (Shared String - Torn Reads):}
-
-\begin{table}[H]
-\centering
-\caption{Version 2 Comprehensive Test Results}
+\caption{Test Results - All 16 Runs}
 \begin{tabular}{|l|r|r|}
 \hline
 \textbf{Mode} & \textbf{Clean Runs} & \textbf{Avg Torn Reads} \\ \hline
-vanilla & 0/4 & 362 \\ \hline
+vanilla & 0/4 & 367 \\ \hline
 reader\_pref & 4/4 & 0 \\ \hline
 writer\_pref & 4/4 & 0 \\ \hline
 fair & 4/4 & 0 \\ \hline
@@ -640,25 +473,28 @@ fair & 4/4 & 0 \\ \hline
 
 \textbf{Analysis:}
 
+\textbf{Vanilla Mode:}
 \begin{itemize}
-    \item \textbf{validation}: All synchronized modes (reader\_pref, writer\_pref, fair) achieved 100\% correctness across all runs
-    \item \textbf{Race condition demonstration}: Vanilla mode consistently showed race conditions as expected
-    \item \textbf{Lost updates}: Average of 2 lost updates per run in vanilla prime counter
-    \item \textbf{Torn reads}: Average of 362 torn reads per run in vanilla shared string
-    \item \textbf{Reliability}: Zero failures in synchronized modes confirms implementation correctness
+    \item 0/4 clean runs = 100\% race condition rate
+    \item Average 367 torn reads per run
+    \item Examples: "Syncating systems..." (mixed), "Mutal exclusures..." (partial), single chars
+    \item Clearly demonstrates concurrent write problem
 \end{itemize}
 
-\textbf{Automated Analysis Tool:}
-
-We developed a Python-based analyzer that:
+\textbf{Synchronized Modes (reader\_pref, writer\_pref, fair):}
 \begin{itemize}
-    \item Validates all read strings against a known set of valid sentences
-    \item Detects torn reads by identifying corrupted strings
-    \item Calculates lost update statistics from final vs expected counts
-    \item Generates comprehensive reports with error counts and types
+    \item 12/12 runs clean = 100\% correctness
+    \item Zero torn reads across all runs
+    \item All read strings matched valid set perfectly
 \end{itemize}
 
-This comprehensive testing validates that our implementation correctly demonstrates both the problems (race conditions in vanilla) and the solutions (100\% correctness in synchronized modes).
+\textbf{Key Findings:}
+\begin{enumerate}
+    \item Perfect validation: All synchronized modes 100\% correct
+    \item Clear problem demonstration: Vanilla 0\% success rate
+    \item No false positives in any synchronized run
+    \item Results reproducible across sessions
+\end{enumerate}
 
 \section{Discussion}
 
@@ -734,9 +570,9 @@ This paper presented a comprehensive study of the Reader-Writer synchronization 
     \item \textbf{One size doesn't fit all}: The optimal synchronization strategy depends on workload characteristics, latency requirements, and fairness constraints.
 \end{enumerate}
 
-The unified API framework we developed enables easy comparison and switching between strategies, making it valuable for both education and prototyping. The three application scenarios--prime counting, string sharing, and file simulation--demonstrate different manifestations of concurrency bugs and the effectiveness of various synchronization approaches.
+The unified API framework we developed enables easy comparison and switching between strategies, making it valuable for both education and prototyping. The shared string application demonstrates torn reads (data corruption) and the effectiveness of various synchronization approaches.
 
-For practitioners, this work provides concrete guidance on selecting appropriate Reader-Writer implementations. For educators, our code serves as a clear demonstration of fundamental concurrency concepts. For researchers, it establishes a baseline for evaluating more sophisticated synchronization mechanisms.
+For practitioners, this work provides concrete guidance on selecting appropriate Reader-Writer implementations. For educators, our code serves as a clear demonstration of fundamental concurrency concepts using a straightforward shared string example. For researchers, it establishes a baseline for evaluating more sophisticated synchronization mechanisms.
 
 \subsection{Future Directions}
 
@@ -750,7 +586,7 @@ Promising directions for future research include:
     \item Performance evaluation on NUMA architectures with non-uniform memory access costs
 \end{itemize}
 
-The complete source code, including all three implementations and four synchronization modes, is available as open-source educational material.
+The complete source code, including the shared string implementation with four synchronization modes, is available as open-source educational material.
 
 \begin{thebibliography}{9}
 

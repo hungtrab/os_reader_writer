@@ -2,12 +2,13 @@
 
 Dự án môn Hệ điều hành về bài toán **Reader-Writer Problem** được viết bằng C với POSIX threads.
 
-## 📋 Tông quan
+## 📋 Tổng quan
 
-Project này bao gồm **2 phiên bản** minh họa bài toán Reader-Writer với các tài nguyên chia sẻ khác nhau:
+Project này minh họa bài toán **Reader-Writer Problem** với tài nguyên chia sẻ: **Shared String**.
 
-1. **Version 1 - Prime Counter**: Đếm số nguyên tố với biến đếm chung (demo lost updates)
-2. **Version 2 - Shared String**: Chuỗi ký tự được cập nhật liên tục (demo torn reads)
+**Shared String**: Chuỗi ký tự được cập nhật liên tục bởi writers, đọc bởi readers
+- Demo rõ ràng nhất về torn reads (chuỗi bị xé)
+- Thể hiện giá trị của RW-lock: nhiều readers đọc đồng thời
 
 Mỗi phiên bản hỗ trợ **4 chế độ đồng bộ**:
 
@@ -20,38 +21,31 @@ Mỗi phiên bản hỗ trợ **4 chế độ đồng bộ**:
 
 ```
 Project/
-├── common/
+├── utils/
 │   ├── rw_lock.h          # API lock thống nhất cho 4 chế độ
 │   ├── rw_lock.c          # Triển khai các thuật toán đồng bộ
 │   ├── logger.h           # Logging với timestamp
 │   └── logger.c
-├── version1_prime/
-│   ├── prime_counter.c    # Chương trình đếm số nguyên tố
-│   └── Makefile
-├── version2_string/
-│   ├── shared_string.c    # Chương trình chuỗi chung
+├── src/
+│   ├── shared_string.c    # Chương trình chính
 │   └── Makefile
 ├── logs/                  # Thư mục chứa test logs
 ├── analyze_race.py        # Script phân tích race conditions
 ├── analyze_comprehensive.py  # Script phân tích toàn diện
-├── run_tests.sh           # Chạy 32 tests tự động
+├── run_tests.sh           # Chạy 16 tests tự động
 ├── Makefile               # Makefile tổng
 └── README.md
 ```
 
 ## 🔧 Build
 
-### Build tất cả các phiên bản:
+### Build version:
 
 ```bash
-make all
-```
-
-###Build từng phiên bản:
-
-```bash
-make version1  # Prime counter
 make version2  # Shared string
+
+# Hoặc
+make all
 ```
 
 ### Clean:
@@ -62,35 +56,10 @@ make clean
 
 ## 🚀 Cách chạy
 
-### Version 1: Prime Counter
+### Shared String
 
 ```bash
-cd version1_prime
-
-# Reader preference (mặc định)
-./prime_counter --readers 5 --writers 3 --duration 10 --mode reader_pref
-
-# Vanilla mode (xem race condition)
-./prime_counter --readers 5 --writers 5 --duration 5 --mode vanilla
-
-# Writer preference
-./prime_counter --readers 10 --writers 2 --duration 10 --mode writer_pref
-
-# Fair mode
-./prime_counter --readers 10 --writers 10 --duration 10 --mode fair
-```
-
-**Cách hoạt động:**
-- Writer threads: Tìm số nguyên tố trong khoảng được gán, tăng `prime_count` khi tìm thấy
-- Reader threads: Đọc và in giá trị `prime_count` định kỳ
-- Vanilla mode sẽ cho kết quả sai do lost update trong `prime_count++`
-
----
-
-### Version 2: Shared String
-
-```bash
-cd version2_string
+cd src
 
 # Reader preference
 ./shared_string --readers 3 --writers 3 --duration 10 --mode reader_pref
@@ -114,23 +83,14 @@ cd version2_string
 
 ## 🧪 Comprehensive Test Results
 
-Project này đã được test toàn diện với **32 runs** (4 modes × 4 runs × 2 versions):
+Project này đã được test toàn diện với **16 runs** (4 modes × 4 runs):
 
 ```
-======================================================================
-VERSION 1: Prime Counter (Lost Updates Detection)
-======================================================================
-
-✗ vanilla         : 3/4 runs clean  (avg 2.0 lost updates)
-✓ reader_pref     : 4/4 runs clean
-✓ writer_pref     : 4/4 runs clean
-✓ fair            : 4/4 runs clean
-
 ======================================================================
 VERSION 2: Shared String (Torn Reads Detection)  
 ======================================================================
 
-✗ vanilla         : 0/4 runs clean  (avg 362 torn reads)
+✗ vanilla         : 0/4 runs clean  (avg 345 torn reads)
 ✓ reader_pref     : 4/4 runs clean
 ✓ writer_pref     : 4/4 runs clean
 ✓ fair            : 4/4 runs clean
@@ -144,11 +104,11 @@ VERSION 2: Shared String (Torn Reads Detection)
 ### Chạy Tests Tự Động
 
 ```bash
-# Chạy 32 tests và phân tích tự động
+# Chạy 16 tests và phân tích tự động
 ./run_tests.sh
 
 # Phân tích một log file cụ thể
-python3 analyze_race.py logs/v2_vanilla_run1_SESSION.txt
+python3 analyze_race.py logs/vanilla_run1_SESSION.txt
 
 # Xem kết quả tổng hợp
 cat results_SESSION.txt
@@ -161,32 +121,29 @@ cat results_SESSION.txt
 ### 1. Demo Race Condition (Vanilla Mode)
 
 ```bash
-# Version 1: Kết quả đếm sẽ SAI (lost updates)
-./version1_prime/prime_counter --mode vanilla --readers 5 --writers 8 --duration 8
-
-# Version 2: Sẽ thấy chuỗi BỊ XÉ (torn reads)
-./version2_string/shared_string --mode vanilla --readers 5 --writers 8 --duration 8
+# Sẽ thấy chuỗi BỊ XÉ (torn reads)
+./src/shared_string --mode vanilla --readers 5 --writers 8 --duration 8
 ```
 
 ### 2. Demo Writer Starvation (Reader Preference)
 
 ```bash
 # Nhiều readers liên tục → writer phải chờ lâu
-./version1_prime/prime_counter --mode reader_pref --readers 50 --writers 2 --duration 10
+./src/shared_string --mode reader_pref --readers 50 --writers 2 --duration 10
 ```
 
 ### 3. Demo Reader Starvation (Writer Preference)
 
 ```bash
 # Nhiều writers liên tục → reader phải chờ lâu
-./version2_string/shared_string --mode writer_pref --readers 2 --writers 20 --duration 10
+./src/shared_string --mode writer_pref --readers 2 --writers 20 --duration 10
 ```
 
 ### 4. Demo Fairness
 
 ```bash
 # Cả reader và writer đều có thời gian chờ hợp lý
-./version1_prime/prime_counter --mode fair --readers 20 --writers 20 --duration 10
+./src/shared_string --mode fair --readers 20 --writers 20 --duration 10
 ```
 
 ## 📝 Giải thích các chế độ đồng bộ
@@ -228,7 +185,6 @@ cat results_SESSION.txt
 ## 🎯 Kết quả mong đợi
 
 ### Vanilla Mode
-- ⚠️ Prime counter: Kết quả < expected (lost updates ~1-3 mỗi run)
 - ⚠️ Shared string: Thấy chuỗi lẫn lộn, bị xé (~300-400 torn reads)
 
 ### Reader/Writer/Fair Preference

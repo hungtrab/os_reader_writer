@@ -1,0 +1,71 @@
+\section{Experimental Evaluation}
+
+\subsection{Test Environment}
+
+\textbf{Hardware:} Multi-core processor with sufficient RAM
+
+\textbf{Software:} Linux OS, GCC compiler, POSIX threads
+
+\subsection{Comprehensive Automated Testing}
+
+\textbf{Objective:} Validate system correctness through comprehensive testing.
+
+\textbf{Test Configuration:}
+\begin{itemize}
+    \item Total runs: 16 (4 modes × 4 runs)
+    \item Application: Shared String
+    \item Writers per run: 8 threads
+    \item Readers per run: 5 threads  
+    \item Duration per run: 8 seconds
+    \item Modes: vanilla, reader\_pref, writer\_pref, fair
+\end{itemize}
+
+\textbf{Automation:}
+\begin{enumerate}
+    \item \texttt{run\_tests.sh}: Executes tests, saves timestamped logs
+    \item \texttt{analyze\_comprehensive.py}: Parses logs, detects torn reads
+    \item Valid set: 20 predefined sentences (1-70 chars)
+    \item Torn read = any string not in valid set
+\end{enumerate}
+
+\subsection{Actual Results}
+
+\textbf{Session ID:} 20260113\_004235
+
+\begin{table}[H]
+\centering
+\caption{Test Results - All 16 Runs}
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Mode} & \textbf{Clean Runs} & \textbf{Avg Torn Reads} \\ \hline
+vanilla & 0/4 & 367 \\ \hline
+reader\_pref & 4/4 & 0 \\ \hline
+writer\_pref & 4/4 & 0 \\ \hline
+fair & 4/4 & 0 \\ \hline
+\end{tabular}
+\end{table}
+
+\textbf{Analysis:}
+
+\textbf{Vanilla Mode:}
+\begin{itemize}
+    \item 0/4 clean runs = 100\% race condition rate
+    \item Average 367 torn reads per run
+    \item Examples: "Syncating systems..." (mixed), "Mutal exclusures..." (partial), single chars
+    \item Clearly demonstrates concurrent write problem
+\end{itemize}
+
+\textbf{Synchronized Modes (reader\_pref, writer\_pref, fair):}
+\begin{itemize}
+    \item 12/12 runs clean = 100\% correctness
+    \item Zero torn reads across all runs
+    \item All read strings matched valid set perfectly
+\end{itemize}
+
+\textbf{Key Findings:}
+\begin{enumerate}
+    \item Perfect validation: All synchronized modes 100\% correct
+    \item Clear problem demonstration: Vanilla 0\% success rate
+    \item No false positives in any synchronized run
+    \item Results reproducible across sessions
+\end{enumerate}

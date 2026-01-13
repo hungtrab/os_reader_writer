@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Comprehensive Race Condition Analysis
-Analyzes all test runs and generates summary report
+Analyzes test runs for Shared String
 """
 
 import sys
@@ -10,7 +10,7 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Dict, List, Tuple
 
-# Valid sentences for version2
+# Valid sentences for shared string
 VALID_SENTENCES = [
     "A", "Hello World!", "The quick brown fox jumps over the lazy dog.",
     "Operating systems manage hardware and software resources.", "X",
@@ -28,32 +28,7 @@ VALID_SENTENCES = [
     "Initial string content."
 ]
 
-def analyze_v1_log(log_file: Path) -> Tuple[bool, int]:
-    """Returns (is_clean, lost_updates)"""
-    try:
-        with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-            content = f.read()
-            
-        # Check for race condition marker
-        if "RACE CONDITION DETECTED" in content or "⚠" in content:
-            # Extract lost updates
-            match = re.search(r'Final prime count: (\d+)', content)
-            expected_match = re.search(r'Expected prime count: (\d+)', content)
-            if match and expected_match:
-                final = int(match.group(1))
-                expected = int(expected_match.group(1))
-                return (False, expected - final)
-        
-        # Check if it's correct
-        if "✓ Count is correct!" in content:
-            return (True, 0)
-        
-        return (True, 0)  # Assume clean if no clear markers
-    except Exception as e:
-        print(f"Error analyzing {log_file}: {e}")
-        return (False, -1)
-
-def analyze_v2_log(log_file: Path) -> Tuple[bool, int]:
+def analyze_log(log_file: Path) -> Tuple[bool, int]:
     """Returns (is_clean, torn_read_count)"""
     torn_reads = 0
     try:
@@ -88,28 +63,20 @@ def main():
     print(f"Found {len(log_files)} log files")
     print("Analyzing...")
     
-    # Results structure: {version: {mode: [(is_clean, error_count), ...]}}
-    results = defaultdict(lambda: defaultdict(list))
+    # Results structure: {mode: [(is_clean, torn_count), ...]}
+    results = defaultdict(list)
     
     for log_file in sorted(log_files):
-        # Parse filename: v1_vanilla_run1_SESSION.txt or v1_reader_pref_run1_SESSION.txt
+        # Parse filename: vanilla_run1_SESSION.txt or reader_pref_run1_SESSION.txt
         filename = log_file.stem  # Remove .txt
         parts = filename.split('_')
         
-        version = parts[0]  # v1 or v2
-        
-        # Extract mode: could be vanilla/fair (1 word) or reader_pref/writer_pref (2 words with _)
-        # Count from the end: SESSION is last, runN is second-to-last
-        # So mode is everything between version and "run"
+        # Extract mode: everything before "run"
         run_index = next(i for i, p in enumerate(parts) if p.startswith('run'))
-        mode = '_'.join(parts[1:run_index])  # Join all parts between version and run
+        mode = '_'.join(parts[0:run_index])  # Join all parts before run
         
-        if version == "v1":
-            is_clean, lost = analyze_v1_log(log_file)
-            results[version][mode].append((is_clean, lost))
-        elif version == "v2":
-            is_clean, torn = analyze_v2_log(log_file)
-            results[version][mode].append((is_clean, torn))
+        is_clean, torn = analyze_log(log_file)
+        results[mode].append((is_clean, torn))
     
     # Generate report
     output_file = f"results_{session_id}.txt"
@@ -118,41 +85,16 @@ def main():
         f.write("READER-WRITER PROBLEM - COMPREHENSIVE TEST RESULTS\n")
         f.write("="*70 + "\n\n")
         f.write(f"Session ID: {session_id}\n")
-        f.write(f"Total Runs: {len(log_files)}\n\n")
+        f.write(f"Total Runs: {len(log_files)}\n")
+        f.write(f"Configuration: 8 writers, 5 readers, 8 seconds per run\n\n")
         
-        # Version 1 Results
+        # Results
         f.write("-"*70 + "\n")
-        f.write("VERSION 1: Prime Counter (Lost Updates Detection)\n")
+        f.write("Shared String (Torn Reads Detection)\n")
         f.write("-"*70 + "\n\n")
         
         for mode in ["vanilla", "reader_pref", "writer_pref", "fair"]:
-            runs = results["v1"][mode]
-            if runs:
-                clean_count = sum(1 for is_clean, _ in runs if is_clean)
-                total_runs = len(runs)
-                
-                # Status: ✓ if all clean, ✗ if any dirty
-                status = "✓" if clean_count == total_runs else "✗"
-                
-                f.write(f"{status} {mode:15s} : {clean_count}/{total_runs} runs clean")
-                
-                if clean_count < total_runs:
-                    # Show error details
-                    total_lost = sum(err for is_clean, err in runs if not is_clean and err > 0)
-                    avg_lost = total_lost / (total_runs - clean_count) if total_runs > clean_count else 0
-                    f.write(f"  (avg {avg_lost:.1f} lost updates)")
-                
-                f.write("\n")
-        
-        f.write("\n")
-        
-        # Version 2 Results
-        f.write("-"*70 + "\n")
-        f.write("VERSION 2: Shared String (Torn Reads Detection)\n")
-        f.write("-"*70 + "\n\n")
-        
-        for mode in ["vanilla", "reader_pref", "writer_pref", "fair"]:
-            runs = results["v2"][mode]
+            runs = results[mode]
             if runs:
                 clean_count = sum(1 for is_clean, _ in runs if is_clean)
                 total_runs = len(runs)
@@ -183,21 +125,18 @@ def main():
         # Check if results match expectations
         all_correct = True
         
-        for version in ["v1", "v2"]:
-            for mode in ["vanilla", "reader_pref", "writer_pref", "fair"]:
-                runs = results[version][mode]
-                if runs:
-                    clean_count = sum(1 for is_clean, _ in runs if is_clean)
-                    total_runs = len(runs)
-                    
-                    if mode == "vanilla":
-                        # Expect SOME race conditions
-                        if clean_count == total_runs:
-                            all_correct = False
-                    else:
-                        # Expect NO race conditions
-                        if clean_count < total_runs:
-                            all_correct = False
+        for mode in ["vanilla", "reader_pref", "writer_pref", "fair"]:
+            runs = results[mode]
+            if runs:
+                clean_count = sum(1 for is_clean, _ in runs if is_clean)
+                total_runs = len(runs)
+                
+                if mode == "vanilla":
+                    if clean_count == total_runs:
+                        all_correct = False
+                else:
+                    if clean_count < total_runs:
+                        all_correct = False
         
         if all_correct:
             f.write("✓ All tests behaved as expected!\n")
